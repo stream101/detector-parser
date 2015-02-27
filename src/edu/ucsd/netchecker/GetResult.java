@@ -123,22 +123,25 @@ public class GetResult {
 		int invokeRespCheck = result.hasRespCheckPaths.size();
 		int missRespCheck = result.noRespCheckPaths.size();
 		int hasConnMonitor = (result.hasConnChangeMonitor? 1: 0);
+		int sinks = result.sinks.size();
+		int posts = result.postMethods.size();
 		
-		System.out.format("%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
-											apkLocation, appName, 
+		
+		System.out.format("%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+										    appName, 
 											stat.missAvailCheck,stat.invokeAvailCheck, 
 											stat.missTimeout, stat.invokeTimeout,
 											stat.missRetry, stat.invokeRetry,
 											stat.noRetryActivity, stat.overRetryService, stat.overRetryPost,
-											invokeRespCheck, missRespCheck, hasConnMonitor);
+											invokeRespCheck, missRespCheck, hasConnMonitor, sinks, posts);
 		
 		addToTotal(stat, invokeRespCheck, missRespCheck, hasConnMonitor);
 		
 	}
 	
 	void showStatsOfAll() {
-		System.out.format("%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
-				"Total", "", 
+		System.out.format("%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+				"Total", 
 				this.missAvailTotal,this.invokeAvailTotal, 
 				this.missTimeoutTotal, this.invokeTimeoutTotal,
 				this.missRetryTotal, this.invokeRetryTotal,
