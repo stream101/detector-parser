@@ -32,7 +32,6 @@ public class GetResult {
 	int overRetryPostTotal;
 	int invokeRespCheckTotal;
 	int missRespCheckTotal;
-	int hasConnMonitorTotal;
 	
 	public GetResult(String inputFile) {this.inputFile = inputFile;}
 	
@@ -121,17 +120,17 @@ public class GetResult {
 	}
 	
 	void showStatsOfAll() {
-		System.out.format("%s; %d; %d; %d; %d; %d; %d; %d; %d; %d; %d; %d;%d\n",
+		System.out.format("%s; %d; %d; %d; %d; %d; %d; %d; %d; %d; %d; %d\n",
 				"Total", 
 				this.missAvailTotal,this.invokeAvailTotal, 
 				this.missTimeoutTotal, this.invokeTimeoutTotal,
 				this.missRetryTotal, this.invokeRetryTotal,
 				this.noRetryActivityTotal, this.overRetryServiceTotal, this.overRetryPostTotal,
-				this.missRespCheckTotal, this.invokeRespCheckTotal, this.hasConnMonitorTotal);
+				this.missRespCheckTotal, this.invokeRespCheckTotal);
 	}
 
 	void showTotalStats (File file) {
-		System.out.println("mAvl;iAvl;mTime;iTime;mRetr;iRetr;NRA;ORS;ORP;mRsp;iRsp;Mon;#Sink;#Posts");
+		System.out.println("mAvl;iAvl;mTime;iTime;mRetr;iRetr;NRA;ORS;ORP;mRsp;iRsp;Sinks;Posts");
 		try {
 			
 			FileInputStream fis = new FileInputStream(file);
