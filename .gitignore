@@ -9,3 +9,4 @@
 *.ear
 
 hs_err_pid*
+*.sh

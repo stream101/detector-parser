@@ -34,6 +34,7 @@ public class Parser {
 			else if (args[i].equalsIgnoreCase("--app")) {
 				totalSummary = false;
 				showApp = args[i+1];
+				i += 2;
 			}
 		}
 	}
