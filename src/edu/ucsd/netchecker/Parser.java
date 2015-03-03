@@ -17,11 +17,15 @@ import com.google.gson.Gson;
 
 
 public class Parser {
-	static boolean totalSummary = true;
+	static boolean totalSummary = false;
 	static String showApp="";
+	static boolean showLib = false; 
 	
 	private static void printUsage() {
-		 System.out.println("Incorrect arguments: [0] = parsed-file");
+		 System.out.println("Usage: [0] = parsed-file");
+		 System.out.println("--all: Show total stats");
+		 System.out.println("--app: Show one app stats");
+		 System.out.println("--libs: Show lib usage distribution");
 	}
 	
 	static void parseAdditionalOptions(String[] args) {
@@ -32,26 +36,40 @@ public class Parser {
 				i += 1;
 			}
 			else if (args[i].equalsIgnoreCase("--app")) {
-				totalSummary = false;
 				showApp = args[i+1];
 				i += 2;
+			}
+			else if (args[i].equalsIgnoreCase("--libs")) {
+				showLib = true;
+				i += 1;
 			}
 		}
 	}
 	
 	public static void main(final String[] args) {
 		
-		if (args.length < 1) {
+		if (args.length < 2) {
 			printUsage();
 			return;
 		}
 		
 		parseAdditionalOptions(args);
 		
-		GetResult result = new GetResult(args[0]);
-		result.setShowSummary(totalSummary);
-		result.setTargetApp(showApp);
-	    result.show();
+		
+	
+	   
+	    if (totalSummary ) {
+	    	GetTotal result = new GetTotal(args[0]);
+	    	result.show();
+	    }
+	    if (showLib) {
+	    	GetLibs result = new GetLibs(args[0]);
+	    	result.show();
+	    }
+	    if (showApp != "") {
+	    	GetSingle result = new GetSingle(args[0], showApp);
+	    	result.show();
+	    }
 		
 	}
 }
