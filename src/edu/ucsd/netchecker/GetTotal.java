@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -35,17 +36,21 @@ public class GetTotal {
 	int numValidApps, numNoAvlApps, numNoTimeoutApps, numNoRetryApps;
 	int alertsInActivityTotal, noAlertsInActivityTotal;
 	int selfRetryTotal;
+	final String output="stats.txt";
+	String inFile;
+	FileWriter writer;
 	String field[] = {"app","libs","Sink","Post","mAvl","iAvl","mTime","iTime","mRetr","iRetr",
 			"NRA","ORS","ORP","mRsp","iRsp","alert","mAlert","Retry"};
 
+	
 	ArrayList<Integer> pathNum = new ArrayList<Integer>();
 	ArrayList<Double> missAvlRatio = new ArrayList<Double>();
 	ArrayList<Double> missTimeoutRatio = new ArrayList<Double>();
 	ArrayList<Double> missRetryRatio = new ArrayList<Double>();
 	 
 	
-	public GetTotal(String inputFile) {
-		this.inputFile = inputFile;
+	public GetTotal(String inputFile) {	
+		this.inFile = inputFile;
 	}
 	
 	
@@ -81,7 +86,7 @@ public class GetTotal {
 		this.selfRetryTotal += selfRetry;
 	}
 	
-	void showStatsOfOne(AnalysisResults result) {
+	void showStatsOfOne(AnalysisResults result) throws IOException {
 		String appName = result.appName;
 		String apkLocation = result.apkFile;
 		HashMap<String, APIStats> map = result.getAPIUsages(); //map<API, APIstats>
@@ -102,7 +107,7 @@ public class GetTotal {
 		int noAlertsInActivity = result.noAlertsInActivity.size();
 		int selfRetry = result.selfRetryMethods.size();
 		
-		System.out.format("%s;%s;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\n",
+		String out = String.format("%s;%s;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\n",
 										    appName, libUsed.toString(),
 										    sinks, posts, 
 											stat.missAvailCheck,stat.invokeAvailCheck, 
@@ -112,6 +117,7 @@ public class GetTotal {
 											missRespCheck,invokeRespCheck, 
 											alertsInActivity,noAlertsInActivity, selfRetry);
 		
+		writer.write(out);
 		addToTotal(stat, invokeRespCheck, missRespCheck, alertsInActivity, noAlertsInActivity, selfRetry);
 		
 	}
@@ -153,17 +159,18 @@ public class GetTotal {
 		*/
 	}
 
-	void showTotalStats (File file) {
+	void showTotalStats () {
 		//System.out.println("mAvl;iAvl;mTime;iTime;mRetr;iRetr;NRA;ORS;ORP;mRsp;iRsp;Sinks;Posts;alertsInActivity,noAlertsInActivity, selfRetry");
-		for (String s : this.field) {
-			System.out.print(s + ";");
-		}
-		System.out.println();
+		//for (String s : this.field) {
+		//	System.out.print(s + ";");
+		//}
+		//System.out.println();
 		try {
 			
-			FileInputStream fis = new FileInputStream(file);
+			FileInputStream fis = new FileInputStream(inFile);
 			BufferedReader br = new BufferedReader(new InputStreamReader(fis));
 			String line = null;
+			this.writer = new FileWriter(output);
 			while ((line = br.readLine()) != null) {
 				Gson gson = new Gson();
 				AnalysisResults obj = gson.fromJson(line, AnalysisResults.class);   
@@ -171,9 +178,10 @@ public class GetTotal {
 				showStatsOfOne(obj);
 			}
 			br.close();
-			
+			this.writer.flush();
+			this.writer.close();
 		} catch (FileNotFoundException e) {
-			System.err.print("Cannot find file " + file.toString());
+			System.err.print("Cannot find file " + inFile.toString());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -184,8 +192,8 @@ public class GetTotal {
 	
 
 	public void show() {
-		File file = new File(inputFile);
-	    showTotalStats(file);
+	    showTotalStats();
+	
 	}
 
 }
