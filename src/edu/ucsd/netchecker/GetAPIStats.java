@@ -3,8 +3,9 @@ package edu.ucsd.netchecker;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
-import soot.jimple.infoflow.android.analysis.result.AnalysisResults.APIStats;
-import soot.jimple.infoflow.android.analysis.result.AnalysisResults.APIType;
+import edu.ucsd.netchecker.AnalysisResults.APIStats;
+import edu.ucsd.netchecker.AnalysisResults.APIType;
+
 
 public class GetAPIStats {
 	HashMap<String, APIStats> info;
@@ -31,8 +32,9 @@ public class GetAPIStats {
 	boolean isAPILibVisited(String api) {
 		for (Entry<String,Integer>entry : visitedLib.entrySet()) {
 			if (api.contains(entry.getKey())) {
-				if (entry.getValue() == 0)
+				if (entry.getValue() != 0) {
 					return true;	
+				}
 			}
 		}
 	   return false;
@@ -58,7 +60,7 @@ public class GetAPIStats {
 		    	appTotalMissTimeoutPaths += miss;
 			}
 		}
-		else if (stats.type == APIType.RETRY) {
+		else if (stats.type == APIType.RETRY || stats.type == APIType.BOTH) {
 			invokeRetry += invoke;
 			missRetry +=  miss;
 			if (!isAPILibVisited(api)) {

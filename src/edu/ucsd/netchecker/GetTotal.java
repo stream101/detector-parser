@@ -9,15 +9,13 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-import soot.jimple.infoflow.android.analysis.result.AnalysisResults;
-import soot.jimple.infoflow.android.analysis.result.AnalysisResults.APIStats;
-import soot.jimple.infoflow.android.analysis.result.AnalysisResults.APIType;
-import soot.jimple.infoflow.android.util.PathHelper;
-
 import com.google.gson.Gson;
+
+import edu.ucsd.netchecker.AnalysisResults.APIStats;
 
 public class GetTotal {
 	boolean showLib;
@@ -35,17 +33,24 @@ public class GetTotal {
 	int invokeRespCheckTotal;
 	int missRespCheckTotal;
 	int numValidApps, numNoAvlApps, numNoTimeoutApps, numNoRetryApps;
+	int alertsInActivityTotal, noAlertsInActivityTotal;
+	int selfRetryTotal;
+	String field[] = {"app","libs","Sink","Post","mAvl","iAvl","mTime","iTime","mRetr","iRetr",
+			"NRA","ORS","ORP","mRsp","iRsp","alert","mAlert","Retry"};
+
 	ArrayList<Integer> pathNum = new ArrayList<Integer>();
 	ArrayList<Double> missAvlRatio = new ArrayList<Double>();
 	ArrayList<Double> missTimeoutRatio = new ArrayList<Double>();
 	ArrayList<Double> missRetryRatio = new ArrayList<Double>();
+	 
 	
 	public GetTotal(String inputFile) {
 		this.inputFile = inputFile;
 	}
 	
 	
-	void addToTotal(GetAPIStats stat, int invokeRespCheck, int missRespCheck) {
+	void addToTotal(GetAPIStats stat, int invokeRespCheck, int missRespCheck,
+			int alertsInActivity, int noAlertsInActivity, int selfRetry) {
 		this.missAvailTotal += stat.missAvailCheck;
 		this.invokeAvailTotal += stat.invokeAvailCheck;
 		this.missTimeoutTotal += stat.missTimeout;
@@ -71,6 +76,9 @@ public class GetTotal {
 		    this.missTimeoutRatio.add((double) stat.appTotalMissTimeoutPaths/totalPaths);
 		    this.missRetryRatio.add((double) stat.appTotalMissRetryPaths/(stat.appTotalMissRetryPaths + stat.appTotalInvokeRetryPaths));
 		}
+		this.alertsInActivityTotal += alertsInActivity;
+		this.noAlertsInActivityTotal += noAlertsInActivity;
+		this.selfRetryTotal += selfRetry;
 	}
 	
 	void showStatsOfOne(AnalysisResults result) {
@@ -88,27 +96,34 @@ public class GetTotal {
 		int missRespCheck = result.noRespCheckPaths.size();
 		int sinks = result.sinks.size();
 		int posts = result.postMethods.size();
+		List<String> libUsed = new ArrayList<String>(result.libUsed);
+		Collections.sort(libUsed);
+		int alertsInActivity = result.alertsInActivity.size();
+		int noAlertsInActivity = result.noAlertsInActivity.size();
+		int selfRetry = result.selfRetryMethods.size();
 		
-		System.out.format("%s;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\n",
-										    appName, 
+		System.out.format("%s;%s;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\n",
+										    appName, libUsed.toString(),
+										    sinks, posts, 
 											stat.missAvailCheck,stat.invokeAvailCheck, 
 											stat.missTimeout, stat.invokeTimeout,
 											stat.missRetry, stat.invokeRetry,
 											stat.noRetryActivity, stat.overRetryService, stat.overRetryPost,
-											missRespCheck,invokeRespCheck, sinks, posts);
+											missRespCheck,invokeRespCheck, 
+											alertsInActivity,noAlertsInActivity, selfRetry);
 		
-		addToTotal(stat, invokeRespCheck, missRespCheck);
+		addToTotal(stat, invokeRespCheck, missRespCheck, alertsInActivity, noAlertsInActivity, selfRetry);
 		
 	}
 	
 	void showStatsOfAll() {
-		System.out.format("%s; %d; %d; %d; %d; %d; %d; %d; %d; %d; %d; %d\n",
+	/*	System.out.format("%s; %d; %d; %d; %d; %d; %d; %d; %d; %d; %d; %d\n",
 				"Total", 
 				this.missAvailTotal,this.invokeAvailTotal, 
 				this.missTimeoutTotal, this.invokeTimeoutTotal,
 				this.missRetryTotal, this.invokeRetryTotal,
 				this.noRetryActivityTotal, this.overRetryServiceTotal, this.overRetryPostTotal,
-				this.missRespCheckTotal, this.invokeRespCheckTotal);
+				this.missRespCheckTotal, this.invokeRespCheckTotal);*/
 	
 		System.out.println("===================");
 		System.out.println("paths number:");
@@ -139,7 +154,11 @@ public class GetTotal {
 	}
 
 	void showTotalStats (File file) {
-		System.out.println("mAvl;iAvl;mTime;iTime;mRetr;iRetr;NRA;ORS;ORP;mRsp;iRsp;Sinks;Posts");
+		//System.out.println("mAvl;iAvl;mTime;iTime;mRetr;iRetr;NRA;ORS;ORP;mRsp;iRsp;Sinks;Posts;alertsInActivity,noAlertsInActivity, selfRetry");
+		for (String s : this.field) {
+			System.out.print(s + ";");
+		}
+		System.out.println();
 		try {
 			
 			FileInputStream fis = new FileInputStream(file);

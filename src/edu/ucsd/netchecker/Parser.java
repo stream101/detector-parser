@@ -9,10 +9,6 @@ import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
-import soot.jimple.infoflow.android.analysis.result.AnalysisResults;
-import soot.jimple.infoflow.android.analysis.result.AnalysisResults.APIStats;
-import soot.jimple.infoflow.android.analysis.result.AnalysisResults.APIType;
-
 import com.google.gson.Gson;
 
 

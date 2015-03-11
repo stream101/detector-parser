@@ -7,14 +7,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Map.Entry;
 
-import soot.jimple.infoflow.android.analysis.result.AnalysisResults;
-import soot.jimple.infoflow.android.analysis.result.AnalysisResults.APIStats;
-import soot.jimple.infoflow.android.analysis.result.AnalysisResults.APIType;
-import soot.jimple.infoflow.android.util.PathHelper;
-
 import com.google.gson.Gson;
+
+import edu.ucsd.netchecker.AnalysisResults.APIStats;
+import edu.ucsd.netchecker.AnalysisResults.APIType;
 
 public class GetSingle {
 	String file;
@@ -100,12 +99,28 @@ void showAppDetail(AnalysisResults result) {
 		for (String s : result.connReceivers)
 			System.out.println(s);
 		System.out.println("---------------------");
-		System.out.println("No Alert failure: ");
-		for (String s : result.noAlertFailures)
+		System.out.println("No error message in Activity: " + result.noAlertsInActivity.size());
+		for (String s : result.noAlertsInActivity)
 			System.out.println(s);
 		System.out.println("---------------------");
-		System.out.println("Has Alert failure: ");
-		for (String s : result.hasAlertFailures)
+		System.out.println("No error message in NonType: " + result.noAlertsInNonType.size());
+		for (String s : result.noAlertsInNonType)
+			System.out.println(s);
+		System.out.println("---------------------");
+		System.out.println("Has error message in Activity: " + result.alertsInActivity.size());
+		for (String s : result.alertsInActivity)
+			System.out.println(s);
+		System.out.println("---------------------");
+		System.out.println("All error callbacks:");
+		for (Entry<String, HashSet<String>> entry : result.errorCallbacks.entrySet()) {
+			System.out.println("\n" + entry.getKey());
+			for (String s : entry.getValue()) {
+				System.out.println("\t" + s);
+			}
+		}
+		System.out.println("---------------------");
+		System.out.println("Self retry: " + result.selfRetryMethods.size());
+		for (String s : result.selfRetryMethods)
 			System.out.println(s);
 		System.out.println("---------------------");
 	}

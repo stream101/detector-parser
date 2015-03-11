@@ -8,8 +8,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 
-import soot.jimple.infoflow.android.analysis.result.AnalysisResults;
-
 import com.google.gson.Gson;
 
 public class GetLibs {
