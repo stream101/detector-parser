@@ -40,7 +40,7 @@ public class GetTotal {
 	String inFile;
 	FileWriter writer;
 	String field[] = {"app","libs","Sink","Post","mAvl","iAvl","mTime","iTime","mRetr","iRetr",
-			"NRA","ORS","ORP","mRsp","iRsp","alert","mAlert","Retry"};
+			"NRA","ORS","ORP","mRsp","iRsp","alert","mAlert","subErr", "mSubErr","Retry"};
 
 	
 	ArrayList<Integer> pathNum = new ArrayList<Integer>();
@@ -106,8 +106,10 @@ public class GetTotal {
 		int alertsInActivity = result.alertsInActivity.size();
 		int noAlertsInActivity = result.noAlertsInActivity.size();
 		int selfRetry = result.selfRetryMethods.size();
+		int subVolleyErrors = result.hasSubErrorHandlers.size();
+		int noSubVolleyErrors = result.noSubErrorHandlers.size();
 		
-		String out = String.format("%s;%s;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\n",
+		String out = String.format("%s;%s;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\n",
 										    appName, libUsed.toString(),
 										    sinks, posts, 
 											stat.missAvailCheck,stat.invokeAvailCheck, 
@@ -115,7 +117,9 @@ public class GetTotal {
 											stat.missRetry, stat.invokeRetry,
 											stat.noRetryActivity, stat.overRetryService, stat.overRetryPost,
 											missRespCheck,invokeRespCheck, 
-											alertsInActivity,noAlertsInActivity, selfRetry);
+											alertsInActivity,noAlertsInActivity, 
+											subVolleyErrors, noSubVolleyErrors,
+											selfRetry);
 		
 		writer.write(out);
 		addToTotal(stat, invokeRespCheck, missRespCheck, alertsInActivity, noAlertsInActivity, selfRetry);
