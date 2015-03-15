@@ -124,7 +124,7 @@ public class GetSingle {
 		for (String s: result.connReceivers)
 			System.out.println(s);
 		System.out.println("---------------------");
-		System.out.println("No error message in Activity: " + this.n_alertsInActivity);
+		System.out.println("No error message in Activity: " + this.n_noAlertsInActivity);
 		for (Entry<String, HashSet<String>> entry : result.noAlertsInActivity.entrySet()) {
 			System.out.println("\n" + entry.getKey());
 			for (String s : entry.getValue()) {
@@ -135,7 +135,7 @@ public class GetSingle {
 			System.out.println();
 		}				
 		System.out.println("---------------------");
-		System.out.println("No error message in NonType: " + this.n_noAlertsInActivity);
+		System.out.println("No error message in NonType: " + this.n_noAlertsInNonType);
 		for (Entry<String, HashSet<String>> entry : result.noAlertsInNonType.entrySet()) {
 			System.out.println("\n" + entry.getKey());
 			for (String s : entry.getValue()) {
@@ -191,7 +191,7 @@ public class GetSingle {
 			}
 		}
 		System.out.println("---------------------");
-		/*System.out.println("All error callbacks:");
+		System.out.println("All error callbacks:");
 		for (Entry<String, HashSet<String>> entry : result.errorCallbacks.entrySet()) {
 			System.out.println("\n" + entry.getKey());
 			for (String s : entry.getValue()) {
@@ -200,7 +200,6 @@ public class GetSingle {
 		}	
 		
 		System.out.println("---------------------");
-		*/
 		System.out.println("Self retry: " + result.selfRetryMethods.size());
 		for (String s : result.selfRetryMethods)
 			System.out.println(s);
