@@ -89,7 +89,7 @@ public class GetTotal {
 	void showStatsOfOne(AnalysisResults result) throws IOException {
 		String appName = result.appName;
 		String apkLocation = result.apkFile;
-		HashMap<String, APIStats> map = result.getAPIUsages(); //map<API, APIstats>
+		TreeMap<String, APIStats> map = result.getAPIUsages(); //map<API, APIstats>
 		GetAPIStats stat = new GetAPIStats(map); //API stats per app
 		stat.compute();
 		

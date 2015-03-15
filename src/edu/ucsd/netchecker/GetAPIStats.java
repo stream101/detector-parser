@@ -2,13 +2,14 @@ package edu.ucsd.netchecker;
 
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 
 import edu.ucsd.netchecker.AnalysisResults.APIStats;
 import edu.ucsd.netchecker.AnalysisResults.APIType;
 
 
 public class GetAPIStats {
-	HashMap<String, APIStats> info;
+	TreeMap<String, APIStats> info;
 	int missAvailCheck,invokeAvailCheck;
 	int missTimeout, invokeTimeout;
 	int missRetry, invokeRetry;
@@ -19,7 +20,7 @@ public class GetAPIStats {
 	int appTotalMissRetryPaths, appTotalInvokeRetryPaths; //every sink have timeout api, but may not have retry api
 	HashMap<String, Integer> visitedLib = new HashMap<String, Integer>();
 	
-	public GetAPIStats(HashMap<String, APIStats> map) {
+	public GetAPIStats(TreeMap<String, APIStats> map) {
 		info = map;
 		visitedLib.put("apache", 0);
 		visitedLib.put("HttpURLConnection", 0);
