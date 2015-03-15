@@ -10,6 +10,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
@@ -17,6 +18,7 @@ import java.util.TreeMap;
 import com.google.gson.Gson;
 
 import edu.ucsd.netchecker.AnalysisResults.APIStats;
+import edu.ucsd.netchecker.AnalysisResults.CheckRspStats;
 
 public class GetTotal {
 	boolean showLib;
@@ -40,7 +42,7 @@ public class GetTotal {
 	String inFile;
 	FileWriter writer;
 	String field[] = {"app","libs","Sink","Post","mAvl","iAvl","mTime","iTime","mRetr","iRetr",
-			"NRA","ORS","ORP","mRsp","iRsp","alert","mAlert","subErr", "mSubErr","Retry"};
+			"NRA","ORS","ORP","mRsp","iRsp","alert","mAlert", "alertNon","mAlertNon", "subErr", "mSubErr","Retry","Receiver"};
 
 	
 	ArrayList<Integer> pathNum = new ArrayList<Integer>();
@@ -86,6 +88,23 @@ public class GetTotal {
 		this.selfRetryTotal += selfRetry;
 	}
 	
+	int computeAlerts (TreeMap<String, HashSet<String>> map) {
+		int i = 0;
+		for (Entry<String, HashSet<String>> entry : map.entrySet()) {
+			i += entry.getValue().size();
+		}
+		return i;
+	}
+	
+	int computeRspCheck(HashMap<String, HashSet<CheckRspStats>> map) {
+		int i = 0;
+		for (Entry<String, HashSet<CheckRspStats>> entry : map.entrySet()) {
+			i += entry.getValue().size();
+		}
+		return i;
+	}
+	
+	
 	void showStatsOfOne(AnalysisResults result) throws IOException {
 		String appName = result.appName;
 		String apkLocation = result.apkFile;
@@ -97,32 +116,39 @@ public class GetTotal {
 		if (stat.invokeAvailCheck + stat.missAvailCheck == 0)
 			return;
 		
-		int invokeRespCheck = result.hasRespCheckPaths.size();
-		int missRespCheck = result.noRespCheckPaths.size();
+		int n_noAlertsInActivity = computeAlerts(result.noAlertsInActivity);
+	    int n_alertsInActivity = computeAlerts(result.alertsInActivity);
+		int n_noAlertsInNonType = computeAlerts(result.noAlertsInNonType) ;
+		int n_alertsInNonType = computeAlerts(result.alertsInNonType);
+		int n_missRspCheckOutputs = computeRspCheck(result.missRspCheckOutputs);
+		int n_hasRspCheckOutputs = computeRspCheck(result.hasRspCheckOutputs);
+		
 		int sinks = result.sinks.size();
 		int posts = result.postMethods.size();
 		List<String> libUsed = new ArrayList<String>(result.libUsed);
 		Collections.sort(libUsed);
-		int alertsInActivity = result.alertsInActivity.size();
-		int noAlertsInActivity = result.noAlertsInActivity.size();
+		//int alertsInActivity = result.alertsInActivity.size();
+		//int noAlertsInActivity = result.noAlertsInActivity.size();
 		int selfRetry = result.selfRetryMethods.size();
 		int subVolleyErrors = result.hasSubErrorHandlers.size();
 		int noSubVolleyErrors = result.noSubErrorHandlers.size();
+		int netReceiver = result.connReceivers.size();
 		
-		String out = String.format("%s;%s;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\n",
+		String out = String.format("%s;%s;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\n",
 										    appName, libUsed.toString(),
 										    sinks, posts, 
 											stat.missAvailCheck,stat.invokeAvailCheck, 
 											stat.missTimeout, stat.invokeTimeout,
 											stat.missRetry, stat.invokeRetry,
 											stat.noRetryActivity, stat.overRetryService, stat.overRetryPost,
-											missRespCheck,invokeRespCheck, 
-											alertsInActivity,noAlertsInActivity, 
+											n_missRspCheckOutputs,n_hasRspCheckOutputs, 
+											n_alertsInActivity,n_noAlertsInActivity, 
+											n_alertsInNonType,n_noAlertsInNonType,
 											subVolleyErrors, noSubVolleyErrors,
-											selfRetry);
+											selfRetry, netReceiver);
 		
 		writer.write(out);
-		addToTotal(stat, invokeRespCheck, missRespCheck, alertsInActivity, noAlertsInActivity, selfRetry);
+		addToTotal(stat, n_hasRspCheckOutputs,n_missRspCheckOutputs,n_alertsInActivity, n_noAlertsInActivity, selfRetry);
 		
 	}
 	
