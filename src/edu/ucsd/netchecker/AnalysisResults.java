@@ -19,7 +19,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 
-
 /*
  * Output format: 
 */
@@ -74,6 +73,8 @@ public class AnalysisResults {
 		public ArrayList<ArrayList<String>> overRetryPostPaths = new  ArrayList<ArrayList<String>>();
 		public ArrayList<ArrayList<String>> noEntryPaths = new ArrayList<ArrayList<String>>();
 		public ArrayList<ArrayList<String>> noSensitiveTypePaths = new ArrayList<ArrayList<String>>();
+		public ArrayList<ArrayList<String>> unKnownRetryServicePaths = new ArrayList<ArrayList<String>>();
+		public ArrayList<ArrayList<String>> unKnownRetryPostPaths = new ArrayList<ArrayList<String>>();
 		
 		public void setType(String signature, int retryIdx, int timeoutIdx) {
 			final String netInfoSig= "<android.net.ConnectivityManager: android.net.NetworkInfo getActiveNetworkInfo()>";

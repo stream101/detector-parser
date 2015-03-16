@@ -10,14 +10,15 @@ import edu.ucsd.netchecker.AnalysisResults.APIType;
 
 public class GetAPIStats {
 	TreeMap<String, APIStats> info;
-	int missAvailCheck,invokeAvailCheck;
-	int missTimeout, invokeTimeout;
-	int missRetry, invokeRetry;
-	int noRetryActivity, overRetryService, overRetryPost;
+	int missAvailCheck = 0,invokeAvailCheck =0;
+	int missTimeout=0, invokeTimeout=0;
+	int missRetry=0, invokeRetry=0;
+	int noRetryActivity=0, overRetryService=0, overRetryPost=0;
+	int unknownRetryService=0, unknownRetryPost=0;
 	//ArrayList<ArrayList<String>> numEntryToSinkPaths = new ArrayList<ArrayList<String>>();
 	//do not replicate paths of the same lib e.g. setReadTimeout and setConnectTimeout.
-	int appTotalMissTimeoutPaths;  
-	int appTotalMissRetryPaths, appTotalInvokeRetryPaths; //every sink have timeout api, but may not have retry api
+	int appTotalMissTimeoutPaths=0;  
+	int appTotalMissRetryPaths=0, appTotalInvokeRetryPaths=0; //every sink have timeout api, but may not have retry api
 	HashMap<String, Integer> visitedLib = new HashMap<String, Integer>();
 	
 	public GetAPIStats(TreeMap<String, APIStats> map) {
@@ -77,7 +78,8 @@ public class GetAPIStats {
 		noRetryActivity +=stats.noRetryActivityPaths.size();
 		overRetryService += stats.overRetryServicePaths.size();
 		overRetryPost += stats.overRetryPostPaths.size();
-			
+		unknownRetryService += stats.unKnownRetryServicePaths.size();
+		unknownRetryPost += stats.unKnownRetryPostPaths.size();
 		setAPILibVisited(api);
 	}
 	

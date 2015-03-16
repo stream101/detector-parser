@@ -41,8 +41,13 @@ public class GetTotal {
 	final String output="stats.txt";
 	String inFile;
 	FileWriter writer;
-	String field[] = {"app","libs","Sink","Post","mAvl","iAvl","mTime","iTime","mRetr","iRetr",
-			"NRA","ORS","ORP","mRsp","iRsp","alert","mAlert", "alertNon","mAlertNon", "subErr", "mSubErr","Retry","Receiver"};
+	String field[] = {"app","libs","Sink","Post",
+					  "mAvl","iAvl","mTime","iTime","mRetr","iRetr",
+					  "NRA","ORS","ORP", "UNRS", "UNRP",
+					  "mRsp","iRsp", 
+					  "alert","mAlert", "alertNon","mAlertNon", 
+					  "subErr", "mSubErr",
+					  "Retry","Receiver"};
 
 	
 	ArrayList<Integer> pathNum = new ArrayList<Integer>();
@@ -134,13 +139,14 @@ public class GetTotal {
 		int noSubVolleyErrors = result.noSubErrorHandlers.size();
 		int netReceiver = result.connReceivers.size();
 		
-		String out = String.format("%s;%s;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\n",
+		String out = String.format("%s;%s;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\n",
 										    appName, libUsed.toString(),
 										    sinks, posts, 
 											stat.missAvailCheck,stat.invokeAvailCheck, 
 											stat.missTimeout, stat.invokeTimeout,
 											stat.missRetry, stat.invokeRetry,
 											stat.noRetryActivity, stat.overRetryService, stat.overRetryPost,
+											stat.unknownRetryService, stat.unknownRetryPost,
 											n_missRspCheckOutputs,n_hasRspCheckOutputs, 
 											n_alertsInActivity,n_noAlertsInActivity, 
 											n_alertsInNonType,n_noAlertsInNonType,
