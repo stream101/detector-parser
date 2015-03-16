@@ -245,6 +245,7 @@ public class GetTotal {
 		System.out.println("No avail apps, " + this.numNoAvlApps+"/"+this.numValidApps + " ," + (double)this.numNoAvlApps/this.numValidApps  );
 		System.out.println("No timeout apps," +this.numNoTimeoutApps + "/" +this.numValidApps + " ,"+(double)this.numNoTimeoutApps/this.numValidApps);
 		System.out.println("No retry apps, " + this.numNoRetryApps+"/"+this.numValidApps + " ," +(double)this.numNoRetryApps/this.numValidApps);
+		System.out.println("Self retry apps, " + this.selfRetryTotal);
 		System.out.println("-------------------");
 		System.out.println("Miss Avail Ratio:");
 		TreeMap<String, Integer> mapa = CDF.plotDCDF(this.missAvlRatio);
