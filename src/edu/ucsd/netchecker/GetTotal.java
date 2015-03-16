@@ -38,6 +38,11 @@ public class GetTotal {
 	int numValidApps, numNoAvlApps, numNoTimeoutApps, numNoRetryApps;
 	int alertsInActivityTotal, noAlertsInActivityTotal;
 	int selfRetryTotal;
+	//map from lib to a list of app's invoke ratio. e.g. apache -> {0.3, 0.35, 0, ...}
+	//TreeMap<String, ArrayList<Double>> invokeTimeoutAllMap = new TreeMap<String, ArrayList<Double>>();
+	TreeMap<String, ArrayList<InvokeMissPair>> apiInvokeMissMap = new TreeMap<String, ArrayList<InvokeMissPair>>();
+	TreeMap<String, Double> apiInvokeRatio = new TreeMap<String, Double>();
+	
 	final String output="stats.txt";
 	String inFile;
 	FileWriter writer;
@@ -54,14 +59,65 @@ public class GetTotal {
 	ArrayList<Double> missAvlRatio = new ArrayList<Double>();
 	ArrayList<Double> missTimeoutRatio = new ArrayList<Double>();
 	ArrayList<Double> missRetryRatio = new ArrayList<Double>();
-	 
-	
+		
 	public GetTotal(String inputFile) {	
 		this.inFile = inputFile;
 	}
 	
+	void addToAllLibMap(TreeMap<String, Double> single,  TreeMap<String, ArrayList<Double>> map) {
+		for (Entry<String, Double> entry : single.entrySet()) {
+			String lib = entry.getKey();
+			Double ratio = entry.getValue();
+			if (!map.containsKey(lib))
+				map.put(lib, new ArrayList<Double>());
+			ArrayList<Double> list = map.get(lib);
+			list.add(ratio);
+			map.put(lib, list);
+		}
+	}
 	
-	void addToTotal(GetAPIStats stat, int invokeRespCheck, int missRespCheck,
+	void computeAllLibRatio(TreeMap<String, ArrayList<Double>> input, TreeMap<String, Double> output) {
+		for (Entry<String,ArrayList<Double>> entry : input.entrySet()) {
+			double total = 0;
+			String lib = entry.getKey();
+			for (Double ratio : entry.getValue()) {
+				total += ratio.doubleValue();
+			}
+			int num = entry.getValue().size();
+			output.put(lib, total/num);
+		}		
+	}
+	
+	void recordInvokeMissCount(TreeMap<String, APIStats> map)  {
+		for (Entry<String, APIStats> entry : map.entrySet()) {
+			APIStats stats = entry.getValue();
+			String api = entry.getKey();
+			if (!apiInvokeMissMap .containsKey(api))		
+				apiInvokeMissMap .put(api, new ArrayList<InvokeMissPair>());
+			InvokeMissPair p = new InvokeMissPair(stats.inovkedAPIPaths.size(), stats.missedAPIPaths.size());
+			System.out.println("" + api + " , invoke " + stats.inovkedAPIPaths.size() + " , miss " + stats.missedAPIPaths.size()); //xinxin.debug
+			ArrayList<InvokeMissPair> value = apiInvokeMissMap.get(api);
+			value.add(p);
+			apiInvokeMissMap.put(api,value);
+		}
+	}
+	
+	void computeAPIInvokeRatio() {
+		for (Entry<String, ArrayList<InvokeMissPair>> entry : apiInvokeMissMap.entrySet()) {
+			int totalInvoke = 0, totalMiss = 0;
+			String api = entry.getKey();
+			for (InvokeMissPair p : entry.getValue()) {
+				totalInvoke += p.getInvokedCount();
+				totalMiss += p.getMissedCount();
+			}
+			if (totalInvoke+totalMiss != 0)
+				this.apiInvokeRatio.put(api, new Double((double)totalInvoke/(totalInvoke+totalMiss)));
+			else 
+				this.apiInvokeRatio.put(api, 0.0);
+		}
+	}
+	
+	void addToTotal(TreeMap<String, APIStats> map, GetAPIStats stat, int invokeRespCheck, int missRespCheck,
 			int alertsInActivity, int noAlertsInActivity, int selfRetry) {
 		this.missAvailTotal += stat.missAvailCheck;
 		this.invokeAvailTotal += stat.invokeAvailCheck;
@@ -78,19 +134,30 @@ public class GetTotal {
 		if(totalPaths != 0) {
 			this.numValidApps += 1;  //valid app at least have one path
 			this.pathNum.add(totalPaths);   //per app total paths
-			if (stat.invokeAvailCheck == 0)
-				this.numNoAvlApps += 1;
-			if (stat.invokeRetry == 0)
+			if (stat.invokeAvailCheck == 0)  //#apps do not invoke conn check
+				this.numNoAvlApps += 1;  
+			if (stat.invokeRetry == 0)       //#apps do not invoke retry api
 				this.numNoRetryApps += 1;
-			if(stat.invokeTimeout == 0)
+			if(stat.invokeTimeout == 0)     //#apps do not inovke timeout api
 				this.numNoTimeoutApps += 1;
+			// per app ratio of paths that do not invoke conn check
 			this.missAvlRatio.add((double)stat.missAvailCheck/(stat.missAvailCheck + stat.invokeAvailCheck));
+			// per app ratio of paths that do not invoke timeout api. If one path has more than 1 timeout api, we only count 1
 		    this.missTimeoutRatio.add((double) stat.appTotalMissTimeoutPaths/totalPaths);
-		    this.missRetryRatio.add((double) stat.appTotalMissRetryPaths/(stat.appTotalMissRetryPaths + stat.appTotalInvokeRetryPaths));
+		    // per app ratio of paths that do not invoke retry api. Remember not all paths have retry apis. 
+		    int totalRetryPaths = stat.appTotalMissRetryPaths + stat.appTotalInvokeRetryPaths;
+		    if (totalRetryPaths !=0) {
+		    	this.missRetryRatio.add((double) stat.appTotalMissRetryPaths/(totalRetryPaths));
+		    }
 		}
 		this.alertsInActivityTotal += alertsInActivity;
 		this.noAlertsInActivityTotal += noAlertsInActivity;
 		this.selfRetryTotal += selfRetry;
+		
+		//Compute per lib ratio
+		//addToAllLibMap(stat.invokeTimeoutAPIMap, this.invokeTimeoutAllMap);
+		//computeAllLibRatio(this.invokeTimeoutAllMap, this.invokeTimeoutAllRatio);
+		recordInvokeMissCount(map);
 	}
 	
 	int computeAlerts (TreeMap<String, HashSet<String>> map) {
@@ -114,6 +181,7 @@ public class GetTotal {
 		String appName = result.appName;
 		String apkLocation = result.apkFile;
 		TreeMap<String, APIStats> map = result.getAPIUsages(); //map<API, APIstats>
+		System.out.println("\nget stats of " + appName);//xinxin.debug
 		GetAPIStats stat = new GetAPIStats(map); //API stats per app
 		stat.compute();
 		
@@ -154,7 +222,7 @@ public class GetTotal {
 											selfRetry, netReceiver);
 		
 		writer.write(out);
-		addToTotal(stat, n_hasRspCheckOutputs,n_missRspCheckOutputs,n_alertsInActivity, n_noAlertsInActivity, selfRetry);
+		addToTotal(map, stat, n_hasRspCheckOutputs,n_missRspCheckOutputs,n_alertsInActivity, n_noAlertsInActivity, selfRetry);
 		
 	}
 	
@@ -166,33 +234,43 @@ public class GetTotal {
 				this.missRetryTotal, this.invokeRetryTotal,
 				this.noRetryActivityTotal, this.overRetryServiceTotal, this.overRetryPostTotal,
 				this.missRespCheckTotal, this.invokeRespCheckTotal);*/
-	
+		
 		System.out.println("===================");
 		System.out.println("paths number:");
 		//Collections.sort(this.pathNum);
 		TreeMap<Integer, Integer> mapp = CDF.plotICDF(this.pathNum);
 		for(Entry<Integer, Integer> entry : mapp.entrySet())
 			System.out.println(entry.getKey() + "," + entry.getValue());
-		System.out.println("===================");
+		System.out.println("-------------------");
 		System.out.println("No avail apps, " + this.numNoAvlApps+"/"+this.numValidApps + " ," + (double)this.numNoAvlApps/this.numValidApps  );
 		System.out.println("No timeout apps," +this.numNoTimeoutApps + "/" +this.numValidApps + " ,"+(double)this.numNoTimeoutApps/this.numValidApps);
 		System.out.println("No retry apps, " + this.numNoRetryApps+"/"+this.numValidApps + " ," +(double)this.numNoRetryApps/this.numValidApps);
-		System.out.println("===================");
+		System.out.println("-------------------");
 		System.out.println("Miss Avail Ratio:");
 		TreeMap<String, Integer> mapa = CDF.plotDCDF(this.missAvlRatio);
 		for(Entry<String, Integer> entry : mapa.entrySet())
 			System.out.println(entry.getKey() + "," + entry.getValue());
-		System.out.println("===================");
+		System.out.println("-------------------");
 		System.out.println("Miss Timeout Ratio:");
 		TreeMap<String, Integer> mapt = CDF.plotDCDF(this.missTimeoutRatio);
 		for(Entry<String, Integer> entry : mapt.entrySet())
 			System.out.println(entry.getKey() + "," + entry.getValue());
-		System.out.println("===================");
-		/*System.out.println("Miss Retry Ratio:");
+		System.out.println("-------------------");
+		System.out.println("Miss Retry Ratio:");
 		for(Double d : this.missRetryRatio)
 			System.out.println(d);
-		System.out.println("===================");
-		*/
+		TreeMap<String, Integer> mapR = CDF.plotDCDF(this.missRetryRatio);
+		for(Entry<String, Integer> entry : mapR.entrySet())
+			System.out.println(entry.getKey() + "," + entry.getValue());
+		System.out.println("-------------------");
+		computeAPIInvokeRatio();
+		System.out.println("API invoke ratios:");
+		for(Entry<String, Double> entry : this.apiInvokeRatio.entrySet()){
+			String api = entry.getKey();
+			double ratio = entry.getValue();
+			System.out.println(api + "  , " + ratio);
+		}
+		System.out.println("-------------------");
 	}
 
 	void showTotalStats () {

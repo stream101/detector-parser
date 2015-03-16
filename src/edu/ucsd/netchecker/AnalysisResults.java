@@ -19,9 +19,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 
-/*
- * Output format: 
-*/
 public class AnalysisResults {
 	public String appName;
 	public String apkFile;

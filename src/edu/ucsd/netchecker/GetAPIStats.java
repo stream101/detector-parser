@@ -20,15 +20,40 @@ public class GetAPIStats {
 	int appTotalMissTimeoutPaths=0;  
 	int appTotalMissRetryPaths=0, appTotalInvokeRetryPaths=0; //every sink have timeout api, but may not have retry api
 	HashMap<String, Integer> visitedLib = new HashMap<String, Integer>();
+	HashMap<String, String> apiToLib = new HashMap<String, String>();
+	//per app per lib path ratio of invoking timeout api. e.g. setSocketTimeout -> invoked/(inovked + missed) 
+	//TreeMap<String, Double> invokeTimeoutAPIMap = new TreeMap<String, Double>();
+	//per app per lib path ratio of invoking retry api. 
+	//TreeMap<String, Double> invokeRetryAPIMap = new TreeMap<String, Double>();
 	
 	public GetAPIStats(TreeMap<String, APIStats> map) {
 		info = map;
+		//Init visited lib
 		visitedLib.put("apache", 0);
 		visitedLib.put("HttpURLConnection", 0);
 		visitedLib.put("volley", 0);
 		visitedLib.put("okhttp", 0);
 		visitedLib.put("loopj", 0);
 		visitedLib.put("turbomanage", 0);
+		
+		//Init api to lib mapping
+		apiToLib.put("org.apache.http", "apache");
+		apiToLib.put("java.net.HttpURLConnection", "hurl");
+		apiToLib.put("com.android.volley", "volley");
+		apiToLib.put("com.squareup.okhttp", "okhttp");
+		apiToLib.put("com.loopj","aah");
+		apiToLib.put("com.turbomanage", "basic");
+		
+	}
+	
+	void addToMap(String api, int invoked, int missed, TreeMap<String, Double> map) {
+		if (!map.containsKey(api))
+			map.put(api, new Double(0));
+		if (missed+invoked != 0) {
+			double newValue = map.get(api).doubleValue() + (double)invoked/(missed+invoked);
+			map.put(api, new Double(newValue));
+			System.out.println("put to map: " + api + " , " + newValue);//xinxin.debug
+		}
 	}
 	
 	boolean isAPILibVisited(String api) {
@@ -42,15 +67,31 @@ public class GetAPIStats {
 	   return false;
 	}
 	
+	String getLibFromAPI(String api) {
+		for (Entry<String,String>entry : apiToLib.entrySet()) {
+			if (api.startsWith(entry.getKey())) {
+				return entry.getValue();
+			}
+		}
+		return null;
+	}
+	
 	void setAPILibVisited(String api) {
 		for (Entry<String,Integer>entry : visitedLib.entrySet()) {
 			if (api.contains(entry.getKey())) {
 				 entry.setValue(1);
+				 //this.apiLib = entry.getKey();
 				 return;
 			}
 		}
 	}
 	
+	/*
+	 * Because one path can have multiple timeout/retry APIs, usually if one is missing,
+	 * others will miss too. e.g. setSoTimeout and setReadTimeout usually appear together 
+	 * or none. So To avoid duplicates, we use isAPILibVisited to record if corresponding lib's 
+	 * paths have been already recorded. 
+	 */
 	void AnalyzeStats(APIStats stats, String api) {
 		int miss = stats.missedAPIPaths.size();
 		int invoke = stats.inovkedAPIPaths.size();
@@ -60,7 +101,13 @@ public class GetAPIStats {
 			missTimeout += miss;
 		    if (!isAPILibVisited(api)) {
 		    	appTotalMissTimeoutPaths += miss;
+		    	//appTotalInvokeTimeoutPaths += invoke;
+		    	//Compute per lib invoke ratio. Do not count duplicated paths.
+		    	//For each lib, we only run addToLibMap once.
+		    	//String lib = getLibFromAPI(api);
+		    	//addToLibMap(lib, invoke, miss, this.invokeTimeoutLibMap);
 			}
+		  //  addToMap(api, invoke, miss, this.invokeTimeoutAPIMap);
 		}
 		else if (stats.type == APIType.RETRY || stats.type == APIType.BOTH) {
 			invokeRetry += invoke;
@@ -68,7 +115,10 @@ public class GetAPIStats {
 			if (!isAPILibVisited(api)) {
 				appTotalMissRetryPaths += miss;
 				appTotalInvokeRetryPaths += invoke;
+				//String lib = getLibFromAPI(api);
+				//addToLibMap(lib, invoke, miss, this.invokeRetryLibMap); 
 			}
+		//	addToMap(api, invoke, miss, this.invokeRetryAPIMap);
 		}
 		else if (stats.type == APIType.AVAIL) {
 			invokeAvailCheck += invoke;
