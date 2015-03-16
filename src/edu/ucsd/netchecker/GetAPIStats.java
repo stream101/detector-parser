@@ -1,5 +1,6 @@
 package edu.ucsd.netchecker;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.TreeMap;
@@ -15,16 +16,16 @@ public class GetAPIStats {
 	int missRetry=0, invokeRetry=0;
 	int noRetryActivity=0, overRetryService=0, overRetryPost=0;
 	int unknownRetryService=0, unknownRetryPost=0;
+	boolean hasRetryAPI=false;
+	int manualSetOverRetriesInService = 0, defaultOverRetriesInService = 0;
+	int manualSetOverRetriesInPost = 0, defaultOverRetriesInPost = 0;
 	//ArrayList<ArrayList<String>> numEntryToSinkPaths = new ArrayList<ArrayList<String>>();
 	//do not replicate paths of the same lib e.g. setReadTimeout and setConnectTimeout.
 	int appTotalMissTimeoutPaths=0;  
 	int appTotalMissRetryPaths=0, appTotalInvokeRetryPaths=0; //every sink have timeout api, but may not have retry api
 	HashMap<String, Integer> visitedLib = new HashMap<String, Integer>();
 	HashMap<String, String> apiToLib = new HashMap<String, String>();
-	//per app per lib path ratio of invoking timeout api. e.g. setSocketTimeout -> invoked/(inovked + missed) 
-	//TreeMap<String, Double> invokeTimeoutAPIMap = new TreeMap<String, Double>();
-	//per app per lib path ratio of invoking retry api. 
-	//TreeMap<String, Double> invokeRetryAPIMap = new TreeMap<String, Double>();
+	
 	
 	public GetAPIStats(TreeMap<String, APIStats> map) {
 		info = map;
@@ -86,6 +87,35 @@ public class GetAPIStats {
 		}
 	}
 	
+	void getWrongRetryCauses(APIStats stats) {
+		ArrayList<ArrayList<String>> missedAPIPaths = stats.missedAPIPaths;
+		ArrayList<ArrayList<String>> invokedAPIPaths = stats.inovkedAPIPaths;
+		ArrayList<ArrayList<String>> noRetryActivityPaths = stats.noRetryActivityPaths;
+		ArrayList<ArrayList<String>> overRetryServicePaths = stats.overRetryServicePaths;
+		ArrayList<ArrayList<String>> overRetryPostPaths = stats.overRetryPostPaths;
+		
+		for (ArrayList<String> path : overRetryServicePaths) {
+			if (PathHelper.pathContainedIn(path, missedAPIPaths)) {
+				System.out.println("Find over retry by default in serivce! ");
+				this.defaultOverRetriesInService += 1;
+			}
+			else {
+				System.out.println("Find over retry manually set in serivce! ");
+				this.manualSetOverRetriesInService += 1;
+			}
+		}
+		
+		for (ArrayList<String> path : overRetryPostPaths) {
+			if (PathHelper.pathContainedIn(path, missedAPIPaths)) {
+				System.out.println("Find over retry by default in post! ");
+				this.defaultOverRetriesInPost += 1;
+			}
+			else {
+				System.out.println("Find over retry manually set in post! ");
+				this.manualSetOverRetriesInPost += 1;
+			}
+		}
+	}
 	/*
 	 * Because one path can have multiple timeout/retry APIs, usually if one is missing,
 	 * others will miss too. e.g. setSoTimeout and setReadTimeout usually appear together 
@@ -102,23 +132,18 @@ public class GetAPIStats {
 		    if (!isAPILibVisited(api)) {
 		    	appTotalMissTimeoutPaths += miss;
 		    	//appTotalInvokeTimeoutPaths += invoke;
-		    	//Compute per lib invoke ratio. Do not count duplicated paths.
-		    	//For each lib, we only run addToLibMap once.
-		    	//String lib = getLibFromAPI(api);
-		    	//addToLibMap(lib, invoke, miss, this.invokeTimeoutLibMap);
 			}
 		  //  addToMap(api, invoke, miss, this.invokeTimeoutAPIMap);
 		}
-		else if (stats.type == APIType.RETRY || stats.type == APIType.BOTH) {
+		else if (stats.type == APIType.RETRY || stats.type == APIType.BOTH) {		
 			invokeRetry += invoke;
 			missRetry +=  miss;
 			if (!isAPILibVisited(api)) {
 				appTotalMissRetryPaths += miss;
 				appTotalInvokeRetryPaths += invoke;
-				//String lib = getLibFromAPI(api);
-				//addToLibMap(lib, invoke, miss, this.invokeRetryLibMap); 
 			}
-		//	addToMap(api, invoke, miss, this.invokeRetryAPIMap);
+			this.hasRetryAPI = true;
+			getWrongRetryCauses(stats);
 		}
 		else if (stats.type == APIType.AVAIL) {
 			invokeAvailCheck += invoke;

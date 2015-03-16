@@ -27,6 +27,26 @@ public class PathHelper {
 		return isVisited;
 	}
 	
+	public static boolean pathContainedIn( ArrayList<String> tgt, ArrayList<ArrayList<String>> paths) {
+		boolean contain = false;
+		for (ArrayList<String> path : paths) {
+			if (path.size() != tgt.size())
+				continue;
+			
+			int i;
+			for (i = 0; i<tgt.size();i++) {
+				if (tgt.get(i) != path.get(i))
+					break;
+			}
+			
+			if (i == tgt.size()) {
+				contain = true;
+				break;
+			}
+		}
+		return contain;
+	}
+	
 	public static ArrayList<String> transformArrayToList(String[] path) {
 		ArrayList<String> newPath = new ArrayList<String>(Arrays.asList(path));
 		newPath.removeAll(Collections.singleton(null));  //remove null

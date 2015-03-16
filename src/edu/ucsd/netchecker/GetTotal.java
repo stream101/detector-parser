@@ -36,6 +36,9 @@ public class GetTotal {
 	int invokeRespCheckTotal;
 	int missRespCheckTotal;
 	int numValidApps, numNoAvlApps, numNoTimeoutApps, numNoRetryApps;
+	int numNoRetryActivityApps, numOverRetryServiceApps, numOverRetryPostApps, numHasRetryAPIApps;
+	int manualOverRetryInServiceTotal=0, defaultOverRetryInServiceTotal = 0;
+	int manualOverRetryInPostTotal = 0, defaultOverRetryInPostTotal = 0;
 	int alertsInActivityTotal, noAlertsInActivityTotal;
 	int selfRetryTotal;
 	//map from lib to a list of app's invoke ratio. e.g. apache -> {0.3, 0.35, 0, ...}
@@ -64,7 +67,7 @@ public class GetTotal {
 		this.inFile = inputFile;
 	}
 	
-	void addToAllLibMap(TreeMap<String, Double> single,  TreeMap<String, ArrayList<Double>> map) {
+	/*void addToAllLibMap(TreeMap<String, Double> single,  TreeMap<String, ArrayList<Double>> map) {
 		for (Entry<String, Double> entry : single.entrySet()) {
 			String lib = entry.getKey();
 			Double ratio = entry.getValue();
@@ -87,7 +90,7 @@ public class GetTotal {
 			output.put(lib, total/num);
 		}		
 	}
-	
+	*/
 	void recordInvokeMissCount(TreeMap<String, APIStats> map)  {
 		for (Entry<String, APIStats> entry : map.entrySet()) {
 			APIStats stats = entry.getValue();
@@ -117,22 +120,25 @@ public class GetTotal {
 		}
 	}
 	
+	void recordWrongRetries(GetAPIStats stat) {
+		this.manualOverRetryInServiceTotal += stat.manualSetOverRetriesInService;  
+		this.defaultOverRetryInServiceTotal += stat.defaultOverRetriesInService;
+		this.manualOverRetryInPostTotal += stat.manualSetOverRetriesInPost;
+		this.defaultOverRetryInPostTotal += stat.defaultOverRetriesInPost;
+	}
+	
 	void addToTotal(TreeMap<String, APIStats> map, GetAPIStats stat, int invokeRespCheck, int missRespCheck,
 			int alertsInActivity, int noAlertsInActivity, int selfRetry) {
+		//forget to invoke
 		this.missAvailTotal += stat.missAvailCheck;
 		this.invokeAvailTotal += stat.invokeAvailCheck;
 		this.missTimeoutTotal += stat.missTimeout;
 		this.invokeTimeoutTotal += stat.invokeTimeout;
 		this.missRetryTotal += stat.missRetry;
 		this.invokeRetryTotal += stat.invokeRetry;
-		this.noRetryActivityTotal += stat.noRetryActivity;
-		this.overRetryServiceTotal += stat.overRetryService; 
-		this.overRetryPostTotal += stat.overRetryPost;
-		this.invokeRespCheckTotal += invokeRespCheck;
-		this.missRespCheckTotal += missRespCheck;
 		int totalPaths = stat.missAvailCheck + stat.invokeAvailCheck;
 		if(totalPaths != 0) {
-			this.numValidApps += 1;  //valid app at least have one path
+			this.numValidApps += 1;  //valid app at least have one path 
 			this.pathNum.add(totalPaths);   //per app total paths
 			if (stat.invokeAvailCheck == 0)  //#apps do not invoke conn check
 				this.numNoAvlApps += 1;  
@@ -150,14 +156,30 @@ public class GetTotal {
 		    	this.missRetryRatio.add((double) stat.appTotalMissRetryPaths/(totalRetryPaths));
 		    }
 		}
+		recordInvokeMissCount(map);
+
+		//misbehaviors 
+		this.noRetryActivityTotal += stat.noRetryActivity;
+		this.overRetryServiceTotal += stat.overRetryService; 
+		this.overRetryPostTotal += stat.overRetryPost;
+		if (stat.noRetryActivity > 0) 
+			this.numNoRetryActivityApps += 1;
+		if (stat.overRetryService > 0) 
+			this.numOverRetryServiceApps += 1;
+		if (stat.overRetryPost > 0) 
+			this.numOverRetryPostApps += 1;
+		if(stat.hasRetryAPI)
+			this.numHasRetryAPIApps += 1;
+		recordWrongRetries(stat);
+		
+		//response check
+		this.invokeRespCheckTotal += invokeRespCheck;
+		this.missRespCheckTotal += missRespCheck;
+		
 		this.alertsInActivityTotal += alertsInActivity;
 		this.noAlertsInActivityTotal += noAlertsInActivity;
 		this.selfRetryTotal += selfRetry;
-		
-		//Compute per lib ratio
-		//addToAllLibMap(stat.invokeTimeoutAPIMap, this.invokeTimeoutAllMap);
-		//computeAllLibRatio(this.invokeTimeoutAllMap, this.invokeTimeoutAllRatio);
-		recordInvokeMissCount(map);
+
 	}
 	
 	int computeAlerts (TreeMap<String, HashSet<String>> map) {
@@ -236,16 +258,19 @@ public class GetTotal {
 				this.missRespCheckTotal, this.invokeRespCheckTotal);*/
 		
 		System.out.println("===================");
+		System.out.println("Miss invoke: ");
+		System.out.println("===================");	
+		System.out.println("-------------------");
+		System.out.println("No avail api apps, " + this.numNoAvlApps+"/"+this.numValidApps + " ," + (double)this.numNoAvlApps/this.numValidApps  );
+		System.out.println("No timeout api apps," +this.numNoTimeoutApps + "/" +this.numValidApps + " ,"+(double)this.numNoTimeoutApps/this.numValidApps);
+		System.out.println("No retry api apps, " + this.numNoRetryApps+"/"+this.numValidApps + " ," +(double)this.numNoRetryApps/this.numValidApps);
+		System.out.println("Self retry apps, " + this.selfRetryTotal);
+		System.out.println("-------------------");
 		System.out.println("paths number:");
 		//Collections.sort(this.pathNum);
 		TreeMap<Integer, Integer> mapp = CDF.plotICDF(this.pathNum);
 		for(Entry<Integer, Integer> entry : mapp.entrySet())
 			System.out.println(entry.getKey() + "," + entry.getValue());
-		System.out.println("-------------------");
-		System.out.println("No avail apps, " + this.numNoAvlApps+"/"+this.numValidApps + " ," + (double)this.numNoAvlApps/this.numValidApps  );
-		System.out.println("No timeout apps," +this.numNoTimeoutApps + "/" +this.numValidApps + " ,"+(double)this.numNoTimeoutApps/this.numValidApps);
-		System.out.println("No retry apps, " + this.numNoRetryApps+"/"+this.numValidApps + " ," +(double)this.numNoRetryApps/this.numValidApps);
-		System.out.println("Self retry apps, " + this.selfRetryTotal);
 		System.out.println("-------------------");
 		System.out.println("Miss Avail Ratio:");
 		TreeMap<String, Integer> mapa = CDF.plotDCDF(this.missAvlRatio);
@@ -271,6 +296,25 @@ public class GetTotal {
 			double ratio = entry.getValue();
 			System.out.println(api + "  , " + ratio);
 		}
+		System.out.println("-------------------");
+		System.out.println("====================");
+		System.out.println("Wrong behavior: ");	
+		System.out.println("====================");
+		System.out.println("No retry in activity apps, " + this.numNoRetryActivityApps+"/"+this.numHasRetryAPIApps + " ," + 
+							(double)this.numNoRetryActivityApps/this.numHasRetryAPIApps);
+		System.out.println("Over retry in service apps, " + this.numOverRetryServiceApps +"/"+this.numHasRetryAPIApps + " ," +
+							(double)this.numOverRetryServiceApps/this.numHasRetryAPIApps);
+		System.out.println("Over retry in post apps, " + this.numOverRetryPostApps + "/"+this.numHasRetryAPIApps + " ," +
+							(double)this.numOverRetryPostApps/this.numHasRetryAPIApps);
+		System.out.println("-------------------");
+		int totalOverRetryInService = this.defaultOverRetryInServiceTotal+this.manualOverRetryInServiceTotal;
+		int totalOverRetryInPost = this.defaultOverRetryInPostTotal + this.manualOverRetryInPostTotal;
+		System.out.println("Over retry in service by default, " + 
+							this.defaultOverRetryInServiceTotal +"/" + totalOverRetryInService +
+							" , " + (double) this.defaultOverRetryInServiceTotal/totalOverRetryInService);				
+		System.out.println("Over retry in post by default, " + 
+							this.defaultOverRetryInPostTotal + "/" +  totalOverRetryInPost +
+							" , " + (double) this.defaultOverRetryInPostTotal/totalOverRetryInPost);
 		System.out.println("-------------------");
 	}
 
