@@ -283,8 +283,6 @@ public class GetTotal {
 			System.out.println(entry.getKey() + "," + entry.getValue());
 		System.out.println("-------------------");
 		System.out.println("Miss Retry Ratio:");
-		for(Double d : this.missRetryRatio)
-			System.out.println(d);
 		TreeMap<String, Integer> mapR = CDF.plotDCDF(this.missRetryRatio);
 		for(Entry<String, Integer> entry : mapR.entrySet())
 			System.out.println(entry.getKey() + "," + entry.getValue());

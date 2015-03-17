@@ -127,7 +127,7 @@ public class GetAPIStats {
 	void AnalyzeStats(APIStats stats, String api) {
 		int miss = stats.missedAPIPaths.size();
 		int invoke = stats.inovkedAPIPaths.size();
-		System.out.println("api " + api + " ,type " + stats.type);//xinxin.debug
+		//System.out.println("api " + api + " ,type " + stats.type);//xinxin.debug
 		
 		if (stats.type == APIType.TIMEOUT || stats.type == APIType.BOTH) {
 			invokeTimeout += invoke;
