@@ -39,30 +39,35 @@ public class GetTotal {
 	int numNoRetryActivityApps, numOverRetryServiceApps, numOverRetryPostApps, numHasRetryAPIApps;
 	int manualOverRetryInServiceTotal=0, defaultOverRetryInServiceTotal = 0;
 	int manualOverRetryInPostTotal = 0, defaultOverRetryInPostTotal = 0;
-	int alertsInActivityTotal, noAlertsInActivityTotal;
-	int selfRetryTotal;
+	int alertsInActivityTotal, noAlertsInActivityTotal, numHasActivityCallsiteApps;
+	int alertsInNative, nativeCallbacks, alertsInCallback, obviouscallbacks;
+	int numNoErrMsgApps, numNoSubErrVolleyApps, numHasSubErrVolleyApps, numNoSubErrorCallbacks, numHasSubErroCallbacks;
+	int numSelfRetryApps;
+	
 	//map from lib to a list of app's invoke ratio. e.g. apache -> {0.3, 0.35, 0, ...}
 	//TreeMap<String, ArrayList<Double>> invokeTimeoutAllMap = new TreeMap<String, ArrayList<Double>>();
 	TreeMap<String, ArrayList<InvokeMissPair>> apiInvokeMissMap = new TreeMap<String, ArrayList<InvokeMissPair>>();
 	TreeMap<String, Double> apiInvokeRatio = new TreeMap<String, Double>();
+	ArrayList<Integer> pathNum = new ArrayList<Integer>();
+	ArrayList<Double> missAvlRatio = new ArrayList<Double>();
+	ArrayList<Double> missTimeoutRatio = new ArrayList<Double>();
+	ArrayList<Double> missRetryRatio = new ArrayList<Double>();
+	ArrayList<Double> missErrMsgRatio = new ArrayList<Double>();
 	
 	final String output="stats.txt";
 	String inFile;
 	FileWriter writer;
-	String field[] = {"app","libs","Sink","Post",
+	final String field[] = {"app","libs","Sink","Post",
 					  "mAvl","iAvl","mTime","iTime","mRetr","iRetr",
 					  "NRA","ORS","ORP", "UNRS", "UNRP",
 					  "mRsp","iRsp", 
 					  "alert","mAlert", "alertNon","mAlertNon", 
 					  "subErr", "mSubErr",
 					  "Retry","Receiver"};
-
 	
-	ArrayList<Integer> pathNum = new ArrayList<Integer>();
-	ArrayList<Double> missAvlRatio = new ArrayList<Double>();
-	ArrayList<Double> missTimeoutRatio = new ArrayList<Double>();
-	ArrayList<Double> missRetryRatio = new ArrayList<Double>();
-		
+    // do not include okhttp.onError(). it is in background. 
+	final String obviousErrorCallbacks[] = {"onFailure", "onError", "onErrorResponse"};
+			
 	public GetTotal(String inputFile) {	
 		this.inFile = inputFile;
 	}
@@ -127,38 +132,80 @@ public class GetTotal {
 		this.defaultOverRetryInPostTotal += stat.defaultOverRetriesInPost;
 	}
 	
-	void addToTotal(TreeMap<String, APIStats> map, GetAPIStats stat, int invokeRespCheck, int missRespCheck,
+	/* Categorize the error callback types -- if have direct error callback such as onErrorResponse */
+	void  ComputeCallbacTypes(TreeMap<String, HashSet<String>> alertsInActivity, TreeMap<String, HashSet<String>> noAlertsInActivity) {
+		for (Entry<String, HashSet<String>> entry : alertsInActivity.entrySet()) {			
+			String callback = entry.getKey();
+			boolean obviousCallback = false;
+			int callsites = entry.getValue().size();
+			for (int i=0; i<this.obviousErrorCallbacks.length; i++) {
+				if (callback.contains(obviousErrorCallbacks[i])) {
+					obviousCallback = true;
+				}
+			}
+			if (obviousCallback) {
+				this.alertsInCallback += callsites;
+				this.obviouscallbacks += callsites;
+			}
+			else {
+				this.alertsInNative += callsites;
+				this.nativeCallbacks += callsites;
+			}
+		}
+		
+		for (Entry<String, HashSet<String>> entry : noAlertsInActivity.entrySet()) {
+			String callback = entry.getKey();
+			boolean obviousCallback = false;
+			int callsites = entry.getValue().size();
+			for (int i=0; i<this.obviousErrorCallbacks.length; i++) {
+				if (callback.contains(obviousErrorCallbacks[i])) {
+					obviousCallback = true;
+				}
+			}
+			if (obviousCallback) {
+				this.obviouscallbacks += callsites;
+			}
+			else 
+				this.nativeCallbacks += callsites;
+		}
+		
+	}
+	
+	void addToTotal(AnalysisResults result, TreeMap<String, APIStats> map, GetAPIStats stat, int invokeRespCheck, int missRespCheck,
 			int alertsInActivity, int noAlertsInActivity, int selfRetry) {
-		//forget to invoke
+		this.numValidApps += 1;  //valid app at least have one path 
+		
+		/* Forget to invoke */
 		this.missAvailTotal += stat.missAvailCheck;
 		this.invokeAvailTotal += stat.invokeAvailCheck;
 		this.missTimeoutTotal += stat.missTimeout;
 		this.invokeTimeoutTotal += stat.invokeTimeout;
 		this.missRetryTotal += stat.missRetry;
 		this.invokeRetryTotal += stat.invokeRetry;
-		int totalPaths = stat.missAvailCheck + stat.invokeAvailCheck;
-		if(totalPaths != 0) {
-			this.numValidApps += 1;  //valid app at least have one path 
-			this.pathNum.add(totalPaths);   //per app total paths
-			if (stat.invokeAvailCheck == 0)  //#apps do not invoke conn check
-				this.numNoAvlApps += 1;  
-			if (stat.invokeRetry == 0)       //#apps do not invoke retry api
-				this.numNoRetryApps += 1;
-			if(stat.invokeTimeout == 0)     //#apps do not inovke timeout api
-				this.numNoTimeoutApps += 1;
-			// per app ratio of paths that do not invoke conn check
+		int totalPaths = stat.missAvailCheck + stat.invokeAvailCheck;			
+		this.pathNum.add(totalPaths);   //per app total paths
+		if (stat.invokeAvailCheck == 0)  //#apps do not invoke conn check
+			this.numNoAvlApps += 1;  
+		if (stat.invokeRetry == 0)       //#apps do not invoke retry api
+			this.numNoRetryApps += 1;
+		if(stat.invokeTimeout == 0)     //#apps do not inovke timeout api
+			this.numNoTimeoutApps += 1;
+		// per app ratio of paths that do not invoke conn check. Exclude apps that do not invoke AVAIL check at all
+		if (stat.invokeAvailCheck > 0)
 			this.missAvlRatio.add((double)stat.missAvailCheck/(stat.missAvailCheck + stat.invokeAvailCheck));
-			// per app ratio of paths that do not invoke timeout api. If one path has more than 1 timeout api, we only count 1
-		    this.missTimeoutRatio.add((double) stat.appTotalMissTimeoutPaths/totalPaths);
-		    // per app ratio of paths that do not invoke retry api. Remember not all paths have retry apis. 
-		    int totalRetryPaths = stat.appTotalMissRetryPaths + stat.appTotalInvokeRetryPaths;
-		    if (totalRetryPaths !=0) {
-		    	this.missRetryRatio.add((double) stat.appTotalMissRetryPaths/(totalRetryPaths));
-		    }
-		}
+		// per app ratio of paths that do not invoke timeout api. If one path has more than 1 timeout api, we only count 1
+		//Exclude those do not check timeout at all 
+	    if (stat.appTotalInvokeTimeoutPaths > 0)
+	    	this.missTimeoutRatio.add((double) stat.appTotalMissTimeoutPaths/totalPaths);
+	    // per app ratio of paths that do not invoke retry api. Remember not all paths have retry apis. 
+	    //Exclude those do not check timeout at all
+	    int totalRetryPaths = stat.appTotalMissRetryPaths + stat.appTotalInvokeRetryPaths;
+	    if (stat.appTotalInvokeRetryPaths > 0) 
+	    	this.missRetryRatio.add((double) stat.appTotalMissRetryPaths/(totalRetryPaths));
+	    
 		recordInvokeMissCount(map);
 
-		//misbehaviors 
+		/* Misbehaviors */
 		this.noRetryActivityTotal += stat.noRetryActivity;
 		this.overRetryServiceTotal += stat.overRetryService; 
 		this.overRetryPostTotal += stat.overRetryPost;
@@ -172,19 +219,40 @@ public class GetTotal {
 			this.numHasRetryAPIApps += 1;
 		recordWrongRetries(stat);
 		
-		//response check
+		/* Response Check */
 		this.invokeRespCheckTotal += invokeRespCheck;
 		this.missRespCheckTotal += missRespCheck;
 		
+		/* Error Messages */
 		this.alertsInActivityTotal += alertsInActivity;
 		this.noAlertsInActivityTotal += noAlertsInActivity;
-		this.selfRetryTotal += selfRetry;
+		//call sites initiaed by an activity
+		if(alertsInActivity + noAlertsInActivity != 0 )
+			this.numHasActivityCallsiteApps += 1;
+		//per app ratio of paths that do not have UI message when the request is initiated by activity
+		//Exclude those that do not have err msg at all
+		if (alertsInActivity > 0)
+			this.missErrMsgRatio.add((double)noAlertsInActivity/(alertsInActivity + noAlertsInActivity)); 	    
+	    ComputeCallbacTypes(result.alertsInActivity, result.noAlertsInActivity);
+	    if (result.hasSubErrorHandlers.size() + result.noSubErrorHandlers.size() != 0) {
+	    	if(result.hasSubErrorHandlers.size() == 0)
+	    	   this.numNoSubErrVolleyApps += 1;
+	    	else
+	    	   this.numHasSubErrVolleyApps += 1;
+	    	
+	    	this.numHasSubErroCallbacks +=  result.hasSubErrorHandlers.size();
+	    	this.numNoSubErrorCallbacks += result.noSubErrorHandlers.size();
+	    }
+	    
+	    /* Self retry */
+	    if(selfRetry > 0)
+	    	this.numSelfRetryApps += 1;
 
 	}
 	
 	int computeAlerts (TreeMap<String, HashSet<String>> map) {
 		int i = 0;
-		for (Entry<String, HashSet<String>> entry : map.entrySet()) {
+		for (Entry<String, HashSet<String>> entry : map.entrySet()) {			
 			i += entry.getValue().size();
 		}
 		return i;
@@ -203,7 +271,7 @@ public class GetTotal {
 		String appName = result.appName;
 		String apkLocation = result.apkFile;
 		TreeMap<String, APIStats> map = result.getAPIUsages(); //map<API, APIstats>
-		System.out.println("\nget stats of " + appName);//xinxin.debug
+		//System.out.println("\nget stats of " + appName);//xinxin.debug
 		GetAPIStats stat = new GetAPIStats(map); //API stats per app
 		stat.compute();
 		
@@ -215,11 +283,16 @@ public class GetTotal {
 	    int n_alertsInActivity = computeAlerts(result.alertsInActivity);
 		int n_noAlertsInNonType = computeAlerts(result.noAlertsInNonType) ;
 		int n_alertsInNonType = computeAlerts(result.alertsInNonType);
+		
 		int n_missRspCheckOutputs = computeRspCheck(result.missRspCheckOutputs);
 		int n_hasRspCheckOutputs = computeRspCheck(result.hasRspCheckOutputs);
 		
+		if (n_alertsInActivity + n_alertsInNonType == 0)
+			this.numNoErrMsgApps += 1;
+			
 		int sinks = result.sinks.size();
 		int posts = result.postMethods.size();
+		
 		List<String> libUsed = new ArrayList<String>(result.libUsed);
 		Collections.sort(libUsed);
 		//int alertsInActivity = result.alertsInActivity.size();
@@ -228,6 +301,7 @@ public class GetTotal {
 		int subVolleyErrors = result.hasSubErrorHandlers.size();
 		int noSubVolleyErrors = result.noSubErrorHandlers.size();
 		int netReceiver = result.connReceivers.size();
+	
 		
 		String out = String.format("%s;%s;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\n",
 										    appName, libUsed.toString(),
@@ -244,8 +318,7 @@ public class GetTotal {
 											selfRetry, netReceiver);
 		
 		writer.write(out);
-		addToTotal(map, stat, n_hasRspCheckOutputs,n_missRspCheckOutputs,n_alertsInActivity, n_noAlertsInActivity, selfRetry);
-		
+		addToTotal(result, map, stat, n_hasRspCheckOutputs,n_missRspCheckOutputs,n_alertsInActivity, n_noAlertsInActivity, selfRetry);	
 	}
 	
 	void showStatsOfAll() {
@@ -258,13 +331,13 @@ public class GetTotal {
 				this.missRespCheckTotal, this.invokeRespCheckTotal);*/
 		
 		System.out.println("===================");
-		System.out.println("Miss invoke: ");
+		System.out.println("MISS INVOKE: ");
 		System.out.println("===================");	
 		System.out.println("-------------------");
 		System.out.println("No avail api apps, " + this.numNoAvlApps+"/"+this.numValidApps + " ," + (double)this.numNoAvlApps/this.numValidApps  );
 		System.out.println("No timeout api apps," +this.numNoTimeoutApps + "/" +this.numValidApps + " ,"+(double)this.numNoTimeoutApps/this.numValidApps);
 		System.out.println("No retry api apps, " + this.numNoRetryApps+"/"+this.numValidApps + " ," +(double)this.numNoRetryApps/this.numValidApps);
-		System.out.println("Self retry apps, " + this.selfRetryTotal);
+		System.out.println("Self retry apps, " + this.numSelfRetryApps+"/"+this.numValidApps + " ," + (double)this.numSelfRetryApps/this.numValidApps);
 		System.out.println("-------------------");
 		System.out.println("paths number:");
 		//Collections.sort(this.pathNum);
@@ -296,16 +369,16 @@ public class GetTotal {
 		}
 		System.out.println("-------------------");
 		System.out.println("====================");
-		System.out.println("Wrong behavior: ");	
+		System.out.println("WRONG BEHAVIOR: ");	
 		System.out.println("====================");
-		System.out.println("No retry in activity apps, " + this.numNoRetryActivityApps+"/"+this.numHasRetryAPIApps + " ," + 
-							(double)this.numNoRetryActivityApps/this.numHasRetryAPIApps);
+		System.out.println("No retry in activity apps, " + this.numNoRetryActivityApps+"/"+this.numHasRetryAPIApps +  
+							" ," + (double)this.numNoRetryActivityApps/this.numHasRetryAPIApps);
 		
-		System.out.println("Over retry in service apps, " + this.numOverRetryServiceApps +"/"+this.numHasRetryAPIApps + " ," +
-							(double)this.numOverRetryServiceApps/this.numHasRetryAPIApps);
+		System.out.println("Over retry in service apps, " + this.numOverRetryServiceApps +"/"+this.numHasRetryAPIApps + 
+							" ," + (double)this.numOverRetryServiceApps/this.numHasRetryAPIApps);
 		
-		System.out.println("Over retry in post apps, " + this.numOverRetryPostApps + "/"+this.numHasRetryAPIApps + " ," +
-							(double)this.numOverRetryPostApps/this.numHasRetryAPIApps);
+		System.out.println("Over retry in post apps, " + this.numOverRetryPostApps + "/"+this.numHasRetryAPIApps + 
+							" ," + (double)this.numOverRetryPostApps/this.numHasRetryAPIApps);
 		System.out.println("-------------------");
 		int totalOverRetryInService = this.defaultOverRetryInServiceTotal+this.manualOverRetryInServiceTotal;
 		int totalOverRetryInPost = this.defaultOverRetryInPostTotal + this.manualOverRetryInPostTotal;
@@ -316,15 +389,49 @@ public class GetTotal {
 		System.out.println("Over retry in post by default, " + 
 							this.defaultOverRetryInPostTotal + "/" +  totalOverRetryInPost +
 							" , " + (double) this.defaultOverRetryInPostTotal/totalOverRetryInPost);
+	
+		System.out.println("====================");
+		System.out.println("ERROR MESSAGE: ");	
+		System.out.println("====================");
+		System.out.println("No error message apps, " + this.numNoErrMsgApps + "/" + this.numHasActivityCallsiteApps + 
+							" , " + (double)this.numNoErrMsgApps/this.numHasActivityCallsiteApps);
+		
+		int callsitesInActivity = this.alertsInActivityTotal + this.noAlertsInActivityTotal;
+		System.out.println("No error message activity callsites: " + this.noAlertsInActivityTotal + "/" + callsitesInActivity +
+							" , " + (double)this.noAlertsInActivityTotal/callsitesInActivity);
 		System.out.println("-------------------");
+		System.out.println("Has error message in native/okhttp, " + this.alertsInNative + "/" + this.nativeCallbacks +
+							" , " + (double) this.alertsInNative/this.nativeCallbacks);
+		
+		System.out.println("Has error message in easy callback, " + this.alertsInCallback + "/" + this.obviouscallbacks +
+							" , " + (double)this.alertsInCallback/this.obviouscallbacks);
+				
+		System.out.println("-------------------");
+		
+		int numVolleyApps =  this.numNoSubErrVolleyApps + this.numHasSubErrVolleyApps;
+		System.out.println("No sub error volley apps, " + this.numNoSubErrVolleyApps + "/" + numVolleyApps +
+						   " , " + (double) this.numNoSubErrVolleyApps/numVolleyApps);
+		
+		int numVolleyCallbacks = this.numNoSubErrorCallbacks + this.numHasSubErroCallbacks;
+		System.out.println("No sub error volley callbacks, " + this.numNoSubErrorCallbacks + "/" + numVolleyCallbacks + 
+							" , " + (double) this.numNoSubErrorCallbacks/numVolleyCallbacks);
+		
+		System.out.println("-------------------");
+		System.out.println("Miss error message ratio:");
+		TreeMap<String, Integer> mapEM = CDF.plotDCDF(this.missErrMsgRatio);
+		for(Entry<String, Integer> entry : mapEM.entrySet())
+			System.out.println(entry.getKey() + "," + entry.getValue());
+		System.out.println("-------------------");
+		System.out.println("====================");
+		System.out.println("INVALID RESPONSE: ");	
+		System.out.println("====================");
+		int checks = this.invokeRespCheckTotal + this.missRespCheckTotal;
+		System.out.println("Miss response check sites, " + this.missRespCheckTotal + "/" + checks +
+							" , " + (double)this.missRespCheckTotal/checks);
+		
 	}
 
 	void showTotalStats () {
-		//System.out.println("mAvl;iAvl;mTime;iTime;mRetr;iRetr;NRA;ORS;ORP;mRsp;iRsp;Sinks;Posts;alertsInActivity,noAlertsInActivity, selfRetry");
-		//for (String s : this.field) {
-		//	System.out.print(s + ";");
-		//}
-		//System.out.println();
 		try {
 			
 			FileInputStream fis = new FileInputStream(inFile);

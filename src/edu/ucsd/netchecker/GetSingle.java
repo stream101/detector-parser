@@ -244,7 +244,7 @@ public class GetSingle {
 		System.out.println("Has error message in Activity: " + n_alertsInActivity);
 		System.out.println("No error message in NonType: " + n_noAlertsInNonType);
 		System.out.println("Has error message in NonType: " + n_alertsInNonType);
-		System.out.println("Sub volley error: " + result.hasSubErrorHandlers.size() + " / " + result.noSubErrorHandlers.size());
+		System.out.println("Sub volley error: " + " has " + result.hasSubErrorHandlers.size() + " , miss " + result.noSubErrorHandlers.size());
 		System.out.println("No response check: " + n_missRspCheckOutputs);
 		System.out.println("Has response check: " + n_hasRspCheckOutputs);
 		System.out.println("Monitor connectivity: " + result.connReceivers.size());

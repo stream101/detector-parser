@@ -21,11 +21,10 @@ public class GetAPIStats {
 	int manualSetOverRetriesInPost = 0, defaultOverRetriesInPost = 0;
 	//ArrayList<ArrayList<String>> numEntryToSinkPaths = new ArrayList<ArrayList<String>>();
 	//do not replicate paths of the same lib e.g. setReadTimeout and setConnectTimeout.
-	int appTotalMissTimeoutPaths=0;  
+	int appTotalMissTimeoutPaths=0, appTotalInvokeTimeoutPaths=0;  
 	int appTotalMissRetryPaths=0, appTotalInvokeRetryPaths=0; //every sink have timeout api, but may not have retry api
 	HashMap<String, Integer> visitedLib = new HashMap<String, Integer>();
 	HashMap<String, String> apiToLib = new HashMap<String, String>();
-	
 	
 	public GetAPIStats(TreeMap<String, APIStats> map) {
 		info = map;
@@ -134,7 +133,7 @@ public class GetAPIStats {
 			missTimeout += miss;
 		    if (!isAPILibVisited(api)) {
 		    	appTotalMissTimeoutPaths += miss;
-		    	//appTotalInvokeTimeoutPaths += invoke;
+		    	appTotalInvokeTimeoutPaths += invoke;
 			}
 		  //  addToMap(api, invoke, miss, this.invokeTimeoutAPIMap);
 		}
