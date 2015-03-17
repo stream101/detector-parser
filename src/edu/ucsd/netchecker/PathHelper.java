@@ -27,18 +27,21 @@ public class PathHelper {
 		return isVisited;
 	}
 	
-	public static boolean pathContainedIn( ArrayList<String> tgt, ArrayList<ArrayList<String>> paths) {
+	public static boolean pathContainedIn(ArrayList<String> tgt, ArrayList<ArrayList<String>> paths) {
 		boolean contain = false;
 		for (ArrayList<String> path : paths) {
 			if (path.size() != tgt.size())
 				continue;
 			
+			prettyPrint(path);
+			
 			int i;
 			for (i = 0; i<tgt.size();i++) {
-				if (tgt.get(i) != path.get(i))
+				if (!tgt.get(i).equals(path.get(i)))
 					break;
 			}
 			
+			System.out.println("i = " + i);
 			if (i == tgt.size()) {
 				contain = true;
 				break;

@@ -53,7 +53,7 @@ public class GetAPIStats {
 		if (missed+invoked != 0) {
 			double newValue = map.get(api).doubleValue() + (double)invoked/(missed+invoked);
 			map.put(api, new Double(newValue));
-			System.out.println("put to map: " + api + " , " + newValue);//xinxin.debug
+			//System.out.println("put to map: " + api + " , " + newValue);
 		}
 	}
 	
@@ -95,23 +95,25 @@ public class GetAPIStats {
 		ArrayList<ArrayList<String>> overRetryPostPaths = stats.overRetryPostPaths;
 		
 		for (ArrayList<String> path : overRetryServicePaths) {
+			PathHelper.prettyPrint(path);
+					
 			if (PathHelper.pathContainedIn(path, missedAPIPaths)) {
-				System.out.println("Find over retry by default in serivce! ");
+				//System.out.println("Find over retry by default in serivce! ");
 				this.defaultOverRetriesInService += 1;
 			}
 			else {
-				System.out.println("Find over retry manually set in serivce! ");
+				//System.out.println("Find over retry manually set in serivce! ");
 				this.manualSetOverRetriesInService += 1;
 			}
 		}
 		
 		for (ArrayList<String> path : overRetryPostPaths) {
 			if (PathHelper.pathContainedIn(path, missedAPIPaths)) {
-				System.out.println("Find over retry by default in post! ");
+				//System.out.println("Find over retry by default in post! ");
 				this.defaultOverRetriesInPost += 1;
 			}
 			else {
-				System.out.println("Find over retry manually set in post! ");
+				//System.out.println("Find over retry manually set in post! ");
 				this.manualSetOverRetriesInPost += 1;
 			}
 		}
