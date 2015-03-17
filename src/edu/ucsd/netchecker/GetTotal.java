@@ -302,8 +302,10 @@ public class GetTotal {
 		System.out.println("====================");
 		System.out.println("No retry in activity apps, " + this.numNoRetryActivityApps+"/"+this.numHasRetryAPIApps + " ," + 
 							(double)this.numNoRetryActivityApps/this.numHasRetryAPIApps);
+		
 		System.out.println("Over retry in service apps, " + this.numOverRetryServiceApps +"/"+this.numHasRetryAPIApps + " ," +
 							(double)this.numOverRetryServiceApps/this.numHasRetryAPIApps);
+		
 		System.out.println("Over retry in post apps, " + this.numOverRetryPostApps + "/"+this.numHasRetryAPIApps + " ," +
 							(double)this.numOverRetryPostApps/this.numHasRetryAPIApps);
 		System.out.println("-------------------");
@@ -312,6 +314,7 @@ public class GetTotal {
 		System.out.println("Over retry in service by default, " + 
 							this.defaultOverRetryInServiceTotal +"/" + totalOverRetryInService +
 							" , " + (double) this.defaultOverRetryInServiceTotal/totalOverRetryInService);				
+		
 		System.out.println("Over retry in post by default, " + 
 							this.defaultOverRetryInPostTotal + "/" +  totalOverRetryInPost +
 							" , " + (double) this.defaultOverRetryInPostTotal/totalOverRetryInPost);

@@ -127,6 +127,7 @@ public class GetAPIStats {
 	void AnalyzeStats(APIStats stats, String api) {
 		int miss = stats.missedAPIPaths.size();
 		int invoke = stats.inovkedAPIPaths.size();
+		System.out.println("api " + api + " ,type " + stats.type);//xinxin.debug
 		
 		if (stats.type == APIType.TIMEOUT || stats.type == APIType.BOTH) {
 			invokeTimeout += invoke;
@@ -137,7 +138,7 @@ public class GetAPIStats {
 			}
 		  //  addToMap(api, invoke, miss, this.invokeTimeoutAPIMap);
 		}
-		else if (stats.type == APIType.RETRY || stats.type == APIType.BOTH) {		
+		if (stats.type == APIType.RETRY || stats.type == APIType.BOTH) {		
 			invokeRetry += invoke;
 			missRetry +=  miss;
 			if (!isAPILibVisited(api)) {
@@ -145,9 +146,12 @@ public class GetAPIStats {
 				appTotalInvokeRetryPaths += invoke;
 			}
 			this.hasRetryAPI = true;
+			
+			System.out.println("has retry api " + api);//xinxin.debug
+			
 			getWrongRetryCauses(stats);
 		}
-		else if (stats.type == APIType.AVAIL) {
+		if (stats.type == APIType.AVAIL) {
 			invokeAvailCheck += invoke;
 			missAvailCheck +=  miss;
 		}
