@@ -94,7 +94,7 @@ public class GetAPIStats {
 		ArrayList<ArrayList<String>> overRetryPostPaths = stats.overRetryPostPaths;
 		
 		for (ArrayList<String> path : overRetryServicePaths) {
-			PathHelper.prettyPrint(path);
+			//.prettyPrint(path);
 					
 			if (PathHelper.pathContainedIn(path, missedAPIPaths)) {
 				//System.out.println("Find over retry by default in serivce! ");
@@ -146,7 +146,7 @@ public class GetAPIStats {
 			}
 			this.hasRetryAPI = true;
 			
-			System.out.println("has retry api " + api);//xinxin.debug
+			//System.out.println("has retry api " + api);//xinxin.debug
 			
 			getWrongRetryCauses(stats);
 		}

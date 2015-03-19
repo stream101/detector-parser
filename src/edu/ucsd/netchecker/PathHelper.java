@@ -33,7 +33,7 @@ public class PathHelper {
 			if (path.size() != tgt.size())
 				continue;
 			
-			prettyPrint(path);
+			//prettyPrint(path);
 			
 			int i;
 			for (i = 0; i<tgt.size();i++) {
@@ -41,7 +41,7 @@ public class PathHelper {
 					break;
 			}
 			
-			System.out.println("i = " + i);
+			//System.out.println("i = " + i);
 			if (i == tgt.size()) {
 				contain = true;
 				break;

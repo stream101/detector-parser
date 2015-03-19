@@ -103,7 +103,7 @@ public class GetTotal {
 			if (!apiInvokeMissMap .containsKey(api))		
 				apiInvokeMissMap .put(api, new ArrayList<InvokeMissPair>());
 			InvokeMissPair p = new InvokeMissPair(stats.inovkedAPIPaths.size(), stats.missedAPIPaths.size());
-			System.out.println("" + api + " , invoke " + stats.inovkedAPIPaths.size() + " , miss " + stats.missedAPIPaths.size()); //xinxin.debug
+			//System.out.println("" + api + " , invoke " + stats.inovkedAPIPaths.size() + " , miss " + stats.missedAPIPaths.size()); //xinxin.debug
 			ArrayList<InvokeMissPair> value = apiInvokeMissMap.get(api);
 			value.add(p);
 			apiInvokeMissMap.put(api,value);
@@ -341,23 +341,23 @@ public class GetTotal {
 		System.out.println("-------------------");
 		System.out.println("paths number:");
 		//Collections.sort(this.pathNum);
-		TreeMap<Integer, Integer> mapp = CDF.plotICDF(this.pathNum);
-		for(Entry<Integer, Integer> entry : mapp.entrySet())
+		TreeMap<Integer, Double> mapp = CDF.plotICDF(this.pathNum);
+		for(Entry<Integer, Double> entry : mapp.entrySet())
 			System.out.println(entry.getKey() + "," + entry.getValue());
 		System.out.println("-------------------");
 		System.out.println("Miss Avail Ratio:");
-		TreeMap<String, Integer> mapa = CDF.plotDCDF(this.missAvlRatio);
-		for(Entry<String, Integer> entry : mapa.entrySet())
+		TreeMap<String, Double> mapa = CDF.plotDCDF(this.missAvlRatio);
+		for(Entry<String, Double> entry : mapa.entrySet())
 			System.out.println(entry.getKey() + "," + entry.getValue());
 		System.out.println("-------------------");
 		System.out.println("Miss Timeout Ratio:");
-		TreeMap<String, Integer> mapt = CDF.plotDCDF(this.missTimeoutRatio);
-		for(Entry<String, Integer> entry : mapt.entrySet())
+		TreeMap<String, Double> mapt = CDF.plotDCDF(this.missTimeoutRatio);
+		for(Entry<String, Double> entry : mapt.entrySet())
 			System.out.println(entry.getKey() + "," + entry.getValue());
 		System.out.println("-------------------");
 		System.out.println("Miss Retry Ratio:");
-		TreeMap<String, Integer> mapR = CDF.plotDCDF(this.missRetryRatio);
-		for(Entry<String, Integer> entry : mapR.entrySet())
+		TreeMap<String, Double> mapR = CDF.plotDCDF(this.missRetryRatio);
+		for(Entry<String, Double> entry : mapR.entrySet())
 			System.out.println(entry.getKey() + "," + entry.getValue());
 		System.out.println("-------------------");
 		computeAPIInvokeRatio();
@@ -418,8 +418,8 @@ public class GetTotal {
 		
 		System.out.println("-------------------");
 		System.out.println("Miss error message ratio:");
-		TreeMap<String, Integer> mapEM = CDF.plotDCDF(this.missErrMsgRatio);
-		for(Entry<String, Integer> entry : mapEM.entrySet())
+		TreeMap<String, Double> mapEM = CDF.plotDCDF(this.missErrMsgRatio);
+		for(Entry<String, Double> entry : mapEM.entrySet())
 			System.out.println(entry.getKey() + "," + entry.getValue());
 		System.out.println("-------------------");
 		System.out.println("====================");
