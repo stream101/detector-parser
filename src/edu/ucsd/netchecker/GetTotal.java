@@ -19,6 +19,7 @@ import com.google.gson.Gson;
 
 import edu.ucsd.netchecker.AnalysisResults.APIStats;
 import edu.ucsd.netchecker.AnalysisResults.CheckRspStats;
+import edu.ucsd.netchecker.AnalysisResults.RequestStats;
 
 public class GetTotal {
 	boolean showLib;
@@ -72,30 +73,6 @@ public class GetTotal {
 		this.inFile = inputFile;
 	}
 	
-	/*void addToAllLibMap(TreeMap<String, Double> single,  TreeMap<String, ArrayList<Double>> map) {
-		for (Entry<String, Double> entry : single.entrySet()) {
-			String lib = entry.getKey();
-			Double ratio = entry.getValue();
-			if (!map.containsKey(lib))
-				map.put(lib, new ArrayList<Double>());
-			ArrayList<Double> list = map.get(lib);
-			list.add(ratio);
-			map.put(lib, list);
-		}
-	}
-	
-	void computeAllLibRatio(TreeMap<String, ArrayList<Double>> input, TreeMap<String, Double> output) {
-		for (Entry<String,ArrayList<Double>> entry : input.entrySet()) {
-			double total = 0;
-			String lib = entry.getKey();
-			for (Double ratio : entry.getValue()) {
-				total += ratio.doubleValue();
-			}
-			int num = entry.getValue().size();
-			output.put(lib, total/num);
-		}		
-	}
-	*/
 	void recordInvokeMissCount(TreeMap<String, APIStats> map)  {
 		for (Entry<String, APIStats> entry : map.entrySet()) {
 			APIStats stats = entry.getValue();
@@ -125,7 +102,7 @@ public class GetTotal {
 		}
 	}
 	
-	void recordWrongRetries(GetAPIStats stat) {
+	void recordWrongRetries(GetAllRequests stat) {
 		this.manualOverRetryInServiceTotal += stat.manualSetOverRetriesInService;  
 		this.defaultOverRetryInServiceTotal += stat.defaultOverRetriesInService;
 		this.manualOverRetryInPostTotal += stat.manualSetOverRetriesInPost;
@@ -171,7 +148,7 @@ public class GetTotal {
 		
 	}
 	
-	void addToTotal(AnalysisResults result, TreeMap<String, APIStats> map, GetAPIStats stat, int invokeRespCheck, int missRespCheck,
+	void addToTotal(AnalysisResults result, TreeMap<String, APIStats> map, GetAllRequests stat, int invokeRespCheck, int missRespCheck,
 			int alertsInActivity, int noAlertsInActivity, int selfRetry) {
 		this.numValidApps += 1;  //valid app at least have one path 
 		
@@ -186,7 +163,7 @@ public class GetTotal {
 		this.pathNum.add(totalPaths);   //per app total paths
 		if (stat.invokeAvailCheck == 0)  //#apps do not invoke conn check
 			this.numNoAvlApps += 1;  
-		if (stat.invokeRetry == 0)       //#apps do not invoke retry api
+		if (stat.invokeRetry == 0 && stat.hasRetryAPI)       //#apps do not invoke retry api
 			this.numNoRetryApps += 1;
 		if(stat.invokeTimeout == 0)     //#apps do not inovke timeout api
 			this.numNoTimeoutApps += 1;
@@ -266,13 +243,23 @@ public class GetTotal {
 		return i;
 	}
 	
+	int getSelfRetryOfThisApp(HashSet<String >selfRetryMethods, String appName) {
+		int retries = 0;
+		for (String s : selfRetryMethods) {
+			if (s.contains(appName))
+				retries += 1;
+		}
+		return retries;
+	}
 	
+	
+	//Show stats of one app 
 	void showStatsOfOne(AnalysisResults result) throws IOException {
 		String appName = result.appName;
 		String apkLocation = result.apkFile;
-		TreeMap<String, APIStats> map = result.getAPIUsages(); //map<API, APIstats>
+		TreeMap<String, RequestStats> map = result.getRequestStats(); //map<API, RequestStats>
 		//System.out.println("\nget stats of " + appName);//xinxin.debug
-		GetAPIStats stat = new GetAPIStats(map); //API stats per app
+		GetAllRequests stat = new GetAllRequests(map); //API stats per app
 		stat.compute();
 		
 		//No path, ignore
@@ -295,27 +282,24 @@ public class GetTotal {
 		
 		List<String> libUsed = new ArrayList<String>(result.libUsed);
 		Collections.sort(libUsed);
-		//int alertsInActivity = result.alertsInActivity.size();
-		//int noAlertsInActivity = result.noAlertsInActivity.size();
-		int selfRetry = result.selfRetryMethods.size();
+		//int selfRetry = result.selfRetryMethods.size();
+		int selfRetry = getSelfRetryOfThisApp(result.selfRetryMethods, appName);
 		int subVolleyErrors = result.hasSubErrorHandlers.size();
 		int noSubVolleyErrors = result.noSubErrorHandlers.size();
 		int netReceiver = result.connReceivers.size();
 	
 		
-		String out = String.format("%s;%s;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\n",
+		String out = String.format("%s;%s;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\n",
 										    appName, libUsed.toString(),
 										    sinks, posts, 
 											stat.missAvailCheck,stat.invokeAvailCheck, 
 											stat.missTimeout, stat.invokeTimeout,
 											stat.missRetry, stat.invokeRetry,
-											stat.noRetryActivity, stat.overRetryService, stat.overRetryPost,
-											stat.unknownRetryService, stat.unknownRetryPost,
+											stat.overRetryService, stat.overRetryPost,
 											n_missRspCheckOutputs,n_hasRspCheckOutputs, 
 											n_alertsInActivity,n_noAlertsInActivity, 
-											n_alertsInNonType,n_noAlertsInNonType,
 											subVolleyErrors, noSubVolleyErrors,
-											selfRetry, netReceiver);
+											selfRetry);
 		
 		writer.write(out);
 		addToTotal(result, map, stat, n_hasRspCheckOutputs,n_missRspCheckOutputs,n_alertsInActivity, n_noAlertsInActivity, selfRetry);	
@@ -336,7 +320,7 @@ public class GetTotal {
 		System.out.println("-------------------");
 		System.out.println("No avail api apps, " + this.numNoAvlApps+"/"+this.numValidApps + " ," + (double)this.numNoAvlApps/this.numValidApps  );
 		System.out.println("No timeout api apps," +this.numNoTimeoutApps + "/" +this.numValidApps + " ,"+(double)this.numNoTimeoutApps/this.numValidApps);
-		System.out.println("No retry api apps, " + this.numNoRetryApps+"/"+this.numValidApps + " ," +(double)this.numNoRetryApps/this.numValidApps);
+		System.out.println("No retry api apps, " + this.numNoRetryApps+"/"+this.numHasRetryAPIApps + " ," +(double)this.numNoRetryApps/this.numHasRetryAPIApps);
 		System.out.println("Self retry apps, " + this.numSelfRetryApps+"/"+this.numValidApps + " ," + (double)this.numSelfRetryApps/this.numValidApps);
 		System.out.println("-------------------");
 		System.out.println("paths number:");
@@ -438,11 +422,10 @@ public class GetTotal {
 			BufferedReader br = new BufferedReader(new InputStreamReader(fis));
 			String line = null;
 			this.writer = new FileWriter(output);
-			while ((line = br.readLine()) != null) {
+			while ((line = br.readLine()) != null) { 
 				Gson gson = new Gson();
 				AnalysisResults obj = gson.fromJson(line, AnalysisResults.class);   
-				//System.out.println("read result: "+obj.noRespCheckPaths.toString());
-				showStatsOfOne(obj);
+				showStatsOfOne(obj); //one app stats
 			}
 			br.close();
 			this.writer.flush();

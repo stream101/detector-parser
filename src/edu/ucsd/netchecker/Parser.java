@@ -51,9 +51,6 @@ public class Parser {
 		
 		parseAdditionalOptions(args);
 		
-		
-	
-	   
 	    if (totalSummary ) {
 	    	GetTotal result = new GetTotal(args[0]);
 	    	result.show();
