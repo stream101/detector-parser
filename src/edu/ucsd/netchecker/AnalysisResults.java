@@ -83,6 +83,8 @@ public class AnalysisResults {
 		HashMap<String, ArrayList<String>> overRetryPostMethodAndEntries = new HashMap<String, ArrayList<String>>();
 		HashSet<String> selfRetryMethods = new HashSet<String>();
 		ArrayList<String> propagatePath = new ArrayList<String>();
+		int nDefaultOverRetryService = 0;
+		int nDefaultOverRetryPost = 0;
 		
 		public void addMissedAPI(ConfigAPIStats a) { missedAPIs.add(a); }
 		public void addInvokedAPI(ConfigAPIStats a) { invokedAPIs.add(a); }
@@ -112,6 +114,8 @@ public class AnalysisResults {
 		public HashMap<String, ArrayList<String>> getOverRetryPostMethodAndEntries() {return this.overRetryPostMethodAndEntries;}
 		public HashSet<String> getSelfRetryMethods() {return this.selfRetryMethods;}
 		public ArrayList<String> getPropagatePath() { return this.propagatePath; } 
+		public int getNumDefaultOverRetryService() { return this.nDefaultOverRetryService; }
+		public int getNumDefaultOverRetryPost() { return this.nDefaultOverRetryPost; }
 	}
 	
 	public class AvailAPIStats {

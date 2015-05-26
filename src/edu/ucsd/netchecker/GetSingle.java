@@ -14,9 +14,12 @@ import java.util.Map.Entry;
 
 import com.google.gson.Gson;
 
-import edu.ucsd.netchecker.AnalysisResults.APIStats;
 import edu.ucsd.netchecker.AnalysisResults.APIType;
+import edu.ucsd.netchecker.AnalysisResults.AvailAPIStats;
 import edu.ucsd.netchecker.AnalysisResults.CheckRspStats;
+import edu.ucsd.netchecker.AnalysisResults.ConfigAPIStats;
+import edu.ucsd.netchecker.AnalysisResults.RequestStats;
+
 
 public class GetSingle {
 	String file;
@@ -58,72 +61,108 @@ public class GetSingle {
 	}
 	
 	void showAppDetail(AnalysisResults result) {
-		preProcessResult(result);
+		boolean hasRetryAPI = false;
+		int n_overRetryInService=0, n_overRetryInPost=0 ;
+		int n_availInvoke = 0, n_availMiss = 0;
+		int n_timeoutInvoke = 0, n_timeoutMiss = 0, n_retryInvoke = 0, n_retryMiss =0;
+		int n_selfRetry = 0;
 		
+		preProcessResult(result);
 		System.out.println("=====================");
 		System.out.println("Results of App " + result.appName);
 		System.out.println("---------------------");
-		for (Entry<String, APIStats> entry : result.APIOutputs.entrySet()) {
-			String api = entry.getKey();
-			APIStats stats = entry.getValue();
-			System.out.println(api);
-			System.out.println("Type: " + stats.type);
+		for (Entry<String, RequestStats> entry: result.requestOutputs.entrySet()){
+			String request = entry.getKey();
+			RequestStats stats = entry.getValue();
+			System.out.println(request);
 			
-			System.out.println("Missed path: " + stats.missedAPIPaths.size());
-			for (ArrayList<String> path : stats.missedAPIPaths) {
-				PathHelper.prettyPrint(path);
-			}
-			
-			System.out.println("Invoked path: " + stats.inovkedAPIPaths.size());
-			for (ArrayList<String> path : stats.inovkedAPIPaths) {
-				PathHelper.prettyPrint(path);
-			}
-			
-			System.out.println("No entry path: " + stats.noEntryPaths.size());
-			for (ArrayList<String> path : stats.noEntryPaths) {
-				PathHelper.prettyPrint(path);
-			}
-			
-			System.out.println("No Activty/Service path: " + stats.noSensitiveTypePaths.size());
-			for (ArrayList<String> path : stats.noSensitiveTypePaths) {
-				PathHelper.prettyPrint(path);
-			}
-			
-			if (stats.type==APIType.BOTH || stats.type == APIType.RETRY) {
-				System.out.println("No retry in Activity path: " + stats.noRetryActivityPaths.size());
-				for (ArrayList<String> path : stats.noRetryActivityPaths) {
-					PathHelper.prettyPrint(path);
+			//print connectivity check status
+			AvailAPIStats avail = stats.getAvailCheckStat();
+			System.out.println("\nAVAIL API: " + "miss " + avail.getMissCheckPaths().size() + " , invoke " + avail.getInvokeCheckLocations().size());
+			if (avail.getMissCheckPaths().size() > 0) {
+				n_availMiss += avail.getMissCheckPaths().size() ;
+				for (ArrayList<String> p : avail.getMissCheckPaths()) {
+					System.out.println("AVAIL missed path: ");
+					PathHelper.prettyPrint(p);
 				}
+			}
+			
+			if (avail.getInvokeCheckPaths().size()>0) {
+				n_availInvoke += avail.getInvokeCheckPaths().size();
+				for (String s : avail.getInvokeCheckLocations())
+					System.out.println("AVAIL invoked location: " + s);
 				
-				System.out.println("Over retry in Service path: " + stats.overRetryServicePaths.size());
-				for (ArrayList<String> path : stats.overRetryServicePaths) {
-					PathHelper.prettyPrint(path);
-				}
-				
-				System.out.println("Over retry in Post path: " + stats.overRetryPostPaths.size());
-				for (ArrayList<String> path : stats.overRetryPostPaths) {
-					PathHelper.prettyPrint(path);
+				for (ArrayList<String> p : avail.getInvokeCheckPaths()) {
+					System.out.println("AVAIL invoked path: ");
+					PathHelper.prettyPrint(p);
 				}
 			}
+			
+			//print config API status
+			if (stats.getMissedAPIs().size()>0) {
+				System.out.println("\nMissed APIs : ");
+				for (ConfigAPIStats c : stats.getMissedAPIs()) {
+					System.out.println(c.getAPIName());
+					if (c.getType().equals(APIType.BOTH) || c.getType().equals(APIType.RETRY)) {
+						n_retryMiss += 1;
+						hasRetryAPI = true;
+					}
+					else if (c.getType().equals(APIType.TIMEOUT))
+						n_timeoutMiss += 1;
+				}
+			}
+			
+			if (stats.getInvokedAPIs().size()>0) {
+				System.out.println("\nInvoked APIs :");
+				for(ConfigAPIStats c: stats.getInvokedAPIs()) {
+					System.out.println(c.getAPIName());
+					if (c.getType().equals(APIType.BOTH) || c.getType().equals(APIType.RETRY)) {
+						n_retryInvoke += 1;
+						hasRetryAPI = true;
+					}
+					else if (c.getType().equals(APIType.TIMEOUT))
+						n_timeoutInvoke += 1;
+				}
+			}
+			
+		
+			if (stats.getOverRetryServiceMethodAndEntries().keySet().size() >0){
+				n_overRetryInService += stats.getOverRetryServiceMethodAndEntries().keySet().size();
+				System.out.println("\nOver retry in service : ");
+				for (Entry<String, ArrayList<String>> e : stats.getOverRetryServiceMethodAndEntries().entrySet()) {
+					System.out.println("retry method: " + e.getKey());
+					System.out.println("associated entry points: ");
+					for (String s : e.getValue())
+						System.out.print(s);																																			
+					System.out.println();
+				}
+			}
+					
+			if(stats.getOverRetryPostMethodAndEntries().keySet().size()>0){
+				n_overRetryInPost += stats.getOverRetryPostMethodAndEntries().keySet().size();
+				System.out.println("\nOver retry in post : ");
+				for (Entry<String, ArrayList<String>> e : stats.getOverRetryPostMethodAndEntries().entrySet()){
+					System.out.println("retry method: " + e.getKey());
+					System.out.println("associated entry points: ");
+					for (String s : e.getValue())
+						System.out.print(s);																																				
+					System.out.println();
+				}
+			}
+			
+			if (stats.getSelfRetryMethods().size()>0) {
+				n_selfRetry += stats.getSelfRetryMethods().size();
+				System.out.println("self retry method: ");
+				for (String s : stats.getSelfRetryMethods()) 
+					System.out.println(s);
+			}
+			
+			System.out.println("\npropagate path: ");
+			PathHelper.prettyPrint(stats.getPropagatePath());
 			
 			System.out.println("---------------------");
-		}
-				
-		System.out.println("Miss Resp null check: " + result.noRespCheckPaths.size());
-		for (ArrayList<String> path : result.noRespCheckPaths) {
-			PathHelper.prettyPrint(path);
-		}
-		System.out.println("---------------------");
+		}	
 		
-		System.out.println("Has Resp null check: " + result.hasRespCheckPaths.size());
-		for (ArrayList<String> path : result.hasRespCheckPaths) {
-			PathHelper.prettyPrint(path);
-		}
-		System.out.println("---------------------");
-		System.out.println("Monitor connectivity: " + result.connReceivers.size());
-		for (String s: result.connReceivers)
-			System.out.println(s);
-		System.out.println("---------------------");
 		System.out.println("No error message in Activity: " + this.n_noAlertsInActivity);
 		for (Entry<String, HashSet<String>> entry : result.noAlertsInActivity.entrySet()) {
 			System.out.println("\n" + entry.getKey());
@@ -135,28 +174,6 @@ public class GetSingle {
 			System.out.println();
 		}				
 		System.out.println("---------------------");
-		System.out.println("No error message in NonType: " + this.n_noAlertsInNonType);
-		for (Entry<String, HashSet<String>> entry : result.noAlertsInNonType.entrySet()) {
-			System.out.println("\n" + entry.getKey());
-			for (String s : entry.getValue()) {
-				System.out.print("[ ");
-				System.out.print(s + " , ");
-				System.out.print(" ]");
-			}
-			System.out.println();
-		}
-		System.out.println("---------------------");
-		System.out.println("Has error message in NonType: " + this.n_alertsInNonType);
-		for (Entry<String, HashSet<String>> entry : result.alertsInNonType.entrySet()) {
-			System.out.println("\n" + entry.getKey());
-			for (String s : entry.getValue()) {
-				System.out.print("[ ");
-				System.out.print(s + " , ");
-				System.out.print(" ]");
-			}
-			System.out.println();
-		}
-		System.out.println("---------------------");
 		System.out.println("Has error message in Activity: " + this.n_alertsInActivity);
 		for (Entry<String, HashSet<String>> entry : result.alertsInActivity.entrySet()) {
 			System.out.println("\n" + entry.getKey());
@@ -167,7 +184,7 @@ public class GetSingle {
 			}
 			System.out.println();
 		}
-		System.out.println("---------------------");
+		
 		System.out.println("Sub volley error: " + result.hasSubErrorHandlers.size());
 		for(String s : result.hasSubErrorHandlers) {
 			System.out.println("\t" + s);
@@ -200,55 +217,29 @@ public class GetSingle {
 		}	
 		
 		System.out.println("---------------------");
-		System.out.println("Self retry: " + result.selfRetryMethods.size());
-		for (String s : result.selfRetryMethods)
-			System.out.println(s);
-		System.out.println("---------------------");
 		System.out.println("Basic Info :");
 		System.out.println("\nUsed libs: ");
 		for (String lib : result.libUsed) 
 			System.out.print(lib + " ,");
 		System.out.println();
 		
-		System.out.println("\nNetwork callsites ");
-		for (Entry<String,String> sinkEntry : result.sinks.entrySet())
-			System.out.println(sinkEntry.getKey() + " <- " + sinkEntry.getValue());
-		
-		System.out.println("\nPost requests ");
-		for (String post : result.postMethods)
-			System.out.println(post);
-		
 		System.out.println("---------------------");
 		System.out.println("Summary:\n");
 		//Print out summary here
-		boolean hasRetryAPI = false;
-		int noRetryInActivity = 0, overRetryInService=0, overRetryInPost=0 ;
-		for (Entry<String, APIStats> entry : result.APIOutputs.entrySet()) {
-			String api = entry.getKey();
-			APIStats stats = entry.getValue();
-			System.out.println(api + " , miss " + stats.missedAPIPaths.size() + " , inovke " + stats.inovkedAPIPaths.size());
-			if (stats.type == APIType.RETRY || stats.type == APIType.BOTH) {
-				hasRetryAPI = true;		
-				noRetryInActivity += stats.noRetryActivityPaths.size();
-				overRetryInService += stats.overRetryServicePaths.size();
-				overRetryInPost += stats.overRetryPostPaths.size();
-			}
-		}
+		
+		//int unknownRetryInService=0, unknownRetryInPost=0;
+		System.out.println("Avail check API: miss " + n_availMiss  + " , invoke " + n_availInvoke);
+		System.out.println("Timeout API: miss " + n_timeoutMiss + " , invoke " + n_timeoutInvoke);
+		System.out.println("Retry API: miss " + n_retryMiss + " , invoke " + n_retryInvoke);
 		
 		if (hasRetryAPI) {
-			System.out.println("No retry in Activity: " + noRetryInActivity);
-			System.out.println("Over retry in Service: " + overRetryInService);
-			System.out.println("Over retry in Post: " + overRetryInPost);
+			System.out.println("Over retry in Service: " + n_overRetryInService);
+			System.out.println("Over retry in Post: " + n_overRetryInPost);
 		}
-		System.out.println("No error message in Activity: " + n_noAlertsInActivity);
-		System.out.println("Has error message in Activity: " + n_alertsInActivity);
-		System.out.println("No error message in NonType: " + n_noAlertsInNonType);
-		System.out.println("Has error message in NonType: " + n_alertsInNonType);
-		System.out.println("Sub volley error: " + " has " + result.hasSubErrorHandlers.size() + " , miss " + result.noSubErrorHandlers.size());
-		System.out.println("No response check: " + n_missRspCheckOutputs);
-		System.out.println("Has response check: " + n_hasRspCheckOutputs);
-		System.out.println("Monitor connectivity: " + result.connReceivers.size());
-		System.out.println("Self retry: " + result.selfRetryMethods.size());
+		System.out.println("Error message in Activity: miss " + n_noAlertsInActivity + " , invoke " + n_alertsInActivity);
+		System.out.println("Sub volley error: miss " + result.hasSubErrorHandlers.size() + " , invoke " + result.noSubErrorHandlers.size());
+		System.out.println("No response check: miss " + n_missRspCheckOutputs + " , invoke " + n_hasRspCheckOutputs);
+		System.out.println("Self retry: " +  n_selfRetry);
 		System.out.println("---------------------");
 	}
 	

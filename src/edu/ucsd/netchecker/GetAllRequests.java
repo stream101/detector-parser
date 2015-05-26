@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-import edu.ucsd.netchecker.AnalysisResults.APIStats;
 import edu.ucsd.netchecker.AnalysisResults.APIType;
 import edu.ucsd.netchecker.AnalysisResults.AvailAPIStats;
 import edu.ucsd.netchecker.AnalysisResults.ConfigAPIStats;
@@ -21,17 +20,18 @@ public class GetAllRequests {
 	int nMissRetry=0, nInvokeRetry=0;  //total num of miss/invoke retry API
 	int nOverRetryService=0, nOverRetryPost=0;  //total num of over retry 
 	boolean hasRetryAPI=false;    
-	int nManualSetOverRetriesInService = 0, nDefaultOverRetriesInService = 0; //total num of requests over retry due to default parameters
-	int nManualSetOverRetriesInPost = 0, nDefaultOverRetriesInPost = 0;
+	int nDefaultOverRetriesInService = 0, nDefaultOverRetriesInPost = 0; //total num of requests over retry due to default parameters
+	int nSelfRetry = 0;
+	TreeMap<String, InvokeMissPair> apiInvokeMissNumber = new TreeMap<String, InvokeMissPair>();
 	//int appTotalMissTimeoutPaths=0, appTotalInvokeTimeoutPaths=0;  
 	//int appTotalMissRetryPaths=0, appTotalInvokeRetryPaths=0; //every sink have timeout api, but may not have retry api
-	HashMap<String, Integer> visitedLib = new HashMap<String, Integer>();
-	HashMap<String, String> apiToLib = new HashMap<String, String>();
+	//HashMap<String, Integer> visitedLib = new HashMap<String, Integer>();
+	//HashMap<String, String> apiToLib = new HashMap<String, String>();
 	
 	public GetAllRequests(TreeMap<String, RequestStats> map) {
 		info = map;
 		//Init visited lib
-		visitedLib.put("apache", 0);
+		/*visitedLib.put("apache", 0);
 		visitedLib.put("HttpURLConnection", 0);
 		visitedLib.put("volley", 0);
 		visitedLib.put("okhttp", 0);
@@ -44,11 +44,13 @@ public class GetAllRequests {
 		apiToLib.put("com.android.volley", "volley");
 		apiToLib.put("com.squareup.okhttp", "okhttp");
 		apiToLib.put("com.loopj","aah");
-		apiToLib.put("com.turbomanage", "basic");
+		apiToLib.put("com.turbomanage", "basic");*/
 		
 	}
 	
-	void addToMap(String api, int invoked, int missed, TreeMap<String, Double> map) {
+	
+	public TreeMap<String, InvokeMissPair> getApiInvokeMissNumber() { return this.apiInvokeMissNumber; }
+	/*void addToMap(String api, int invoked, int missed, TreeMap<String, Double> map) {
 		if (!map.containsKey(api))
 			map.put(api, new Double(0));
 		if (missed+invoked != 0) {
@@ -77,8 +79,8 @@ public class GetAllRequests {
 		}
 		return null;
 	}
-	
-	void setAPILibVisited(String api) {
+	*/
+	/*void setAPILibVisited(String api) {
 		for (Entry<String,Integer>entry : visitedLib.entrySet()) {
 			if (api.contains(entry.getKey())) {
 				 entry.setValue(1);
@@ -86,39 +88,26 @@ public class GetAllRequests {
 				 return;
 			}
 		}
+	}*/
+	
+	void recordAPIInvokeTimes(String api) {
+		if (!this.apiInvokeMissNumber.containsKey(api))
+			apiInvokeMissNumber.put(api, new InvokeMissPair());
+		
+		InvokeMissPair pair = apiInvokeMissNumber.get(api);
+		int nInvoke = pair.getInvokedCount() + 1;
+		pair.setInvokeCount(nInvoke);
 	}
 	
-	void getWrongRetryCauses(APIStats stats) {
-		ArrayList<ArrayList<String>> missedAPIPaths = stats.missedAPIPaths;
-		ArrayList<ArrayList<String>> invokedAPIPaths = stats.inovkedAPIPaths;
-		ArrayList<ArrayList<String>> noRetryActivityPaths = stats.noRetryActivityPaths;
-		ArrayList<ArrayList<String>> overRetryServicePaths = stats.overRetryServicePaths;
-		ArrayList<ArrayList<String>> overRetryPostPaths = stats.overRetryPostPaths;
+	void recordAPIMissTimes(String api) {
+		if (!this.apiInvokeMissNumber.containsKey(api))
+			apiInvokeMissNumber.put(api, new InvokeMissPair());
 		
-		for (ArrayList<String> path : overRetryServicePaths) {
-			//.prettyPrint(path);
-					
-			if (PathHelper.pathContainedIn(path, missedAPIPaths)) {
-				//System.out.println("Find over retry by default in serivce! ");
-				this.defaultOverRetriesInService += 1;
-			}
-			else {
-				//System.out.println("Find over retry manually set in serivce! ");
-				this.manualSetOverRetriesInService += 1;
-			}
-		}
-		
-		for (ArrayList<String> path : overRetryPostPaths) {
-			if (PathHelper.pathContainedIn(path, missedAPIPaths)) {
-				//System.out.println("Find over retry by default in post! ");
-				this.defaultOverRetriesInPost += 1;
-			}
-			else {
-				//System.out.println("Find over retry manually set in post! ");
-				this.manualSetOverRetriesInPost += 1;
-			}
-		}
+		InvokeMissPair pair = apiInvokeMissNumber.get(api);
+		int nMiss = pair.getMissedCount() + 1;
+		pair.setMissedCount(nMiss);
 	}
+	
 	/*
 	 * Because one path can have multiple timeout/retry APIs, usually if one is missing,
 	 * others will miss too. e.g. setSoTimeout and setReadTimeout usually appear together 
@@ -141,6 +130,9 @@ public class GetAllRequests {
 			}
 			if (type.equals(APIType.TIMEOUT))
 				this.nMissTimeout += 1;
+			
+			//Record invoke numbers of each API
+			recordAPIInvokeTimes(api.getAPIName());
 		}
 		
 		HashSet<ConfigAPIStats> invokedConfigs = stats.getInvokedAPIs();
@@ -152,7 +144,11 @@ public class GetAllRequests {
 			}
 			if (type.equals(APIType.TIMEOUT))
 				this.nInvokeTimeout += 1;
+			//Record miss numbers of each API
+			recordAPIMissTimes(api.getAPIName());
 		}
+		
+		
 		
 		HashMap<String, ArrayList<String>> overRetryInServie = stats.getOverRetryServiceMethodAndEntries();
 		this.nOverRetryService += overRetryInServie.keySet().size();
@@ -160,8 +156,10 @@ public class GetAllRequests {
 		HashMap<String, ArrayList<String>> overRetryInPost = stats.getOverRetryPostMethodAndEntries();
 		this.nOverRetryPost += overRetryInPost.keySet().size();
 		
+		this.nDefaultOverRetriesInService += stats.getNumDefaultOverRetryService();
+		this.nDefaultOverRetriesInPost += stats.getNumDefaultOverRetryPost();
 		
-		
+		this.nSelfRetry += stats.getSelfRetryMethods().size();
 	}
 	
 	void compute() {
