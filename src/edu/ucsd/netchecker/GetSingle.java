@@ -152,7 +152,7 @@ public class GetSingle {
 			
 			if (stats.getSelfRetryMethods().size()>0) {
 				n_selfRetry += stats.getSelfRetryMethods().size();
-				System.out.println("self retry method: ");
+				System.out.println("\nSelf retry method: ");
 				for (String s : stats.getSelfRetryMethods()) 
 					System.out.println(s);
 			}

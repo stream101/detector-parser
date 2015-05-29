@@ -263,14 +263,19 @@ public class GetTotal {
 		
 		List<String> libUsed = new ArrayList<String>(result.libUsed);
 		Collections.sort(libUsed);
-		int selfRetry = stat.nSelfRetry;
-		int subVolleyErrors = result.hasSubErrorHandlers.size();
+			
+		int	subVolleyErrors = result.hasSubErrorHandlers.size();
 		int noSubVolleyErrors = result.noSubErrorHandlers.size();
-	
+		if (subVolleyErrors + noSubVolleyErrors == 0) {
+			subVolleyErrors = -1;
+			noSubVolleyErrors = -1;
+		}
 		
-		String out = String.format("%s;%s;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\n",
+		int selfRetry = stat.nSelfRetry;
+		
+		String out = String.format("%s;%s;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\n",
 										    appName, libUsed.toString(),
-										    sinks, posts, 
+										    stat.nRequests, 
 											stat.nMissAvailCheck,stat.nInvokeAvailCheck, 
 											stat.nMissTimeout, stat.nInvokeTimeout,
 											stat.nMissRetry, stat.nInvokeRetry,

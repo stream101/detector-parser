@@ -59,7 +59,7 @@ public class CDF {
 	}
 	
 	public static TreeMap<Integer, Double> plotICDF(ArrayList<Integer> list) {
-		int[] xaxis = {5, 10, 15, 20, 25, 30, 35, 40, 45, 50};
+		int[] xaxis = {2, 4, 6, 8, 10, 12, 14, 16, 18, 20};
 		TreeMap<Integer, Integer> map = new TreeMap<Integer, Integer>();
 		TreeMap<Integer, Double> cdf = new TreeMap<Integer, Double>();
 		double total = 0;

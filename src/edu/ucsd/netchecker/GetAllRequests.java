@@ -128,7 +128,7 @@ public class GetAllRequests {
 				this.nMissRetry += 1;
 				this.hasRetryAPI = true;
 			}
-			if (type.equals(APIType.TIMEOUT))
+			if (type.equals(APIType.BOTH) || type.equals(APIType.TIMEOUT))
 				this.nMissTimeout += 1;
 			
 			//Record invoke numbers of each API
@@ -142,7 +142,7 @@ public class GetAllRequests {
 				this.nInvokeRetry += 1;
 				this.hasRetryAPI = true;
 			}
-			if (type.equals(APIType.TIMEOUT))
+			if (type.equals(APIType.TIMEOUT) || type.equals(APIType.BOTH))
 				this.nInvokeTimeout += 1;
 			//Record miss numbers of each API
 			recordAPIMissTimes(api.getAPIName());
