@@ -38,9 +38,10 @@ public class GetSingle {
 
 	int computeAlerts (TreeMap<String, HashSet<String>> map) {
 		int i = 0;
-		for (Entry<String, HashSet<String>> entry : map.entrySet()) {
-			i += entry.getValue().size();
-		}
+		//for (Entry<String, HashSet<String>> entry : map.entrySet()) {
+			//i += entry.getValue().size();
+		//}
+		i  = map.keySet().size();
 		return i;
 	}
 	
